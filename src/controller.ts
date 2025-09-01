@@ -1,0 +1,105 @@
+import {
+    InferInsertModel,
+    InferSelectModel
+} from "drizzle-orm";
+import { PgTable } from "drizzle-orm/pg-core";
+import { Request, Response } from "express";
+import { z } from "zod";
+import { CRUDService, Filter, PaginationParams } from "./types";
+
+interface BaseSchema<T extends PgTable> {
+    base: z.ZodObject;
+    filter: z.ZodSchema<Partial<InferSelectModel<T>>>;
+}
+
+export class BaseController<T extends PgTable> {
+    protected service: CRUDService;
+    private schema: BaseSchema<T>;
+    private createSchema: z.ZodSchema<InferInsertModel<T>>;
+    private updateSchema: z.ZodSchema<Partial<InferInsertModel<T>>>;
+
+    constructor(
+        service: CRUDService,
+        base: z.ZodObject,
+        filter: z.ZodSchema<Partial<T["$inferSelect"]>>
+    ) {
+        this.service = service;
+
+        // @ts-expect-error infer schema
+        this.createSchema = base.omit({
+            id: true,
+            deletedAt: true
+        }) as z.ZodSchema<InferInsertModel<T>>;
+
+        // @ts-expect-error infer schema
+        this.updateSchema = base.partial() as z.ZodSchema<
+            Partial<InferInsertModel<T>>
+        >;
+        this.schema = { base, filter };
+    }
+
+    getAll = async (req: Request, res: Response) => {
+        const filters = getFilters(req, this.schema.filter);
+        const pagination = getPagination(req);
+        const [items, total] = await Promise.all([
+            this.service.findAll({ pagination, filters }),
+            this.service.count(filters)
+        ]);
+
+        res.status(200).json({
+            pagination,
+            items,
+            total
+        });
+    };
+
+    getById = async (req: Request, res: Response) => {
+        const item = await this.service.findOne(req.params.id);
+        res.status(200).json(item);
+    };
+
+    create = async (req: Request, res: Response) => {
+        const data = this.createSchema.parse(req.body);
+        const item = await this.service.create(data);
+        res.status(201).json(item);
+    };
+
+    update = async (req: Request, res: Response) => {
+        const data = this.updateSchema.parse(req.body);
+        const item = await this.service.update(req.params.id, data);
+        res.status(200).json(item);
+    };
+
+    delete = async (req: Request, res: Response) => {
+        await this.service.delete(req.params.id);
+        res.status(204).send();
+    };
+}
+
+/*
+    * Extract the filters from the Request
+*/
+function getFilters<
+    T extends PgTable
+>(
+    req: Request,
+    filter: z.ZodSchema<Filter<T>>
+) {
+    return filter.parse({
+        ...req.params,
+        ...req.query
+    });
+}
+
+/*
+    * Extract PaginationParams from the request
+*/
+function getPagination(req: Request) {
+    return {
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        pageSize: req.query.pageSize
+            ? parseInt(req.query.pageSize as string)
+            : 10
+    } as PaginationParams;
+}
+
