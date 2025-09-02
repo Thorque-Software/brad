@@ -18,7 +18,10 @@ export function findAllRelational<
 
         const items = q.findMany({
             ...config,
-            where: and(...conditions),
+            where: (table, { isNull }) => and(
+                isNull((table as any).deletedAt),
+                ...conditions
+            ),
             limit: limit,
             offset: offset
         });
@@ -39,7 +42,10 @@ export function findOneRelational<
         const result = await q.findFirst({
             ...config,
             // TODO: Validate table contains 'id' field
-            where: (table, { eq }) => eq((table as any).id, id),
+            where: (table, { eq, isNull }) => and(
+                isNull((table as any).deletedAt),
+                eq((table as any).id, id),
+            )
         });
 
         if (!result) {

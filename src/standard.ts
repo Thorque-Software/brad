@@ -30,9 +30,7 @@ export class ServiceBuilder<
             );
 
             if (result.length == 0) {
-                throw new Error(
-                    `${this.tableName} with id ${id} not found`
-                );
+                throw notFoundWithId(this.tableName, id);
             }
 
             return result[0];
@@ -78,17 +76,15 @@ export class ServiceBuilder<
             if (Object.keys(data).length == 0) {
                 throw new BadRequest("update needs at least one field");
             }
-            const result = await this.db
+            const [result] = await this.db
                 .update(this.table)
                 .set(data)
                 .where(eq(this.table.id, id))
                 .returning()
-                .catch((e: any) => handleSqlError(e));
+                .catch((e: any) => handleSqlError(e))  as InferSelectModel<T>[];
 
             if (!result) {
-                throw new NotFound(
-                    `${this.tableName} with id ${id} not found`
-                );
+                throw notFoundWithId(this.tableName, id);
             }
             return result;
         }
@@ -104,9 +100,7 @@ export class ServiceBuilder<
                     isNull(this.table.deletedAt))
                 );
             if (rowCount == 0) {
-                throw new NotFound(
-                    `${this.tableName} with id ${id} not found`
-                );
+                throw notFoundWithId(this.tableName, id);
             }
         }
     }
@@ -117,9 +111,7 @@ export class ServiceBuilder<
                 .delete(this.table)
                 .where(eq(this.table.id, id));
             if (rowCount == 0) {
-                throw new NotFound(
-                    `${this.tableName} with id ${id} not found`
-                );
+                throw notFoundWithId(this.tableName, id);
             }
         }
     }
@@ -140,3 +132,8 @@ export class ServiceBuilder<
         }
     }
 }
+
+function notFoundWithId(tableName: string, id: any) {
+    return new NotFound(`${tableName} with id ${id} not found`);
+}
+
