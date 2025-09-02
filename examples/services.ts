@@ -1,16 +1,19 @@
 import { db } from "./db"
-import { count, create, findAll, findOne, softDelete, update } from "bradb";
+import { ServiceBuilder } from "bradb";
 import { findAllRelational, findOneRelational } from "bradb";
 import { serviceTable } from "./schema"
 import { serviceFilterMap } from "./filter";
 
+const builder = new ServiceBuilder(db, serviceTable, serviceFilterMap);
+
 export const serviceService = {
-    create: create(db, serviceTable),
-    count: count(db, serviceTable, serviceFilterMap),
-    delete: softDelete(db, serviceTable),
-    update: update(db, serviceTable),
-    // findAll: findAll( // add pagination and filters
-    //     serviceFilterMap,
+    create: builder.create(),
+    count: builder.count(),
+    delete: builder.softDelete(),
+    // or you can do a soft delete
+    // delete: builder.hardDelete,
+    update: builder.update(),
+    // findAll: builder.findAll( // add pagination and filters
     //     // Dont forget $dinamyc()
     //     db.select({name: serviceTable.name}).from(serviceTable).orderBy(serviceTable.id).$dynamic()
     // ),
@@ -25,7 +28,7 @@ export const serviceService = {
                 provider: true
             }
     }),
-    findOne: findOne(serviceTable, // agrega el where eq y el Custom Error
+    findOne: builder.findOne(// agrega el where eq y el Custom Error
         db.select().from(serviceTable).$dynamic()
     ),
     findOneR: findOneRelational(db.query.serviceTable, {

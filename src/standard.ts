@@ -1,5 +1,5 @@
 import { Filter, FilterMap, FindAllOptions, PrimaryKeyType, Table } from "./types";
-import { PgColumn, PgSelect, PgTable } from "drizzle-orm/pg-core";
+import { PgSelect, PgTable } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
     count as drizzleCount, 
@@ -7,136 +7,136 @@ import { and, eq,
 import { buildWhere, getConditions, getPagination } from "./utils";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
 
-export function findOne<
-    T extends Table,
-    S extends PgSelect
->(
-    table: T, 
-    select: S
-) {
-    return async (id: number) => {
-        const result = await select.where(eq(table.id, id));
-
-        if (result.length == 0) {
-            throw new Error(
-                `${getTableName(table)} with id ${id} not found`
-            );
-        }
-
-        return result[0];
-    }
-}
-
-export function findAll<
-    T extends PgTable & {id: PgColumn},
-    S extends PgSelect<T["_"]["name"]>
->(
-    map: FilterMap<T>,
-    select: S
-) {
-    return async (options: FindAllOptions<T>) => {
-        const { offset, limit } = getPagination(options);
-        const conditions = getConditions(options, map);
-
-        const items = select
-            .where(and(...conditions))
-            .limit(limit)
-            .offset(offset)
-            .execute();
-
-        return items as any as InferSelectModel<T>[];
-    }
-}
-
-export function create<T extends PgTable>(db: any, table: T) {
-    return async (data: InferInsertModel<T>) => {
-        const [result] = await db
-            .insert(table)
-            .values(data)
-            .returning()
-            .catch(handleSqlError);
-        return result as InferSelectModel<T>;
-    }
-}
-
-export function update<
+export class ServiceBuilder<
     T extends Table,
     TSchema extends Record<string, unknown>,
+>{
+    private readonly db: NodePgDatabase<TSchema>;
+    private readonly table: T;
+    private readonly map: FilterMap<T>
+    readonly tableName: string;
 
->(db: NodePgDatabase<TSchema>, table: T) {
-    return async (
-        id: PrimaryKeyType<T>,
-        data: Partial<InferInsertModel<T>>
-    ) => {
-        if (Object.keys(data).length == 0) {
-            throw new BadRequest("update needs at least one field");
-        }
-        const result = await db
-            .update(table)
-            .set(data)
-            .where(eq(table.id, id))
-            .returning()
-            .catch((e: any) => handleSqlError(e));
-
-        if (!result) {
-            throw new NotFound(
-                `${getTableName(table)} with id ${id} not found`
-            );
-        }
-        return result;
+    constructor(db: NodePgDatabase<TSchema>, table: T, map: FilterMap<T>) {
+        this.db = db;
+        this.table = table;
+        this.tableName = getTableName(table);
+        this.map = map;
     }
-}
 
-export function softDelete<
-    T extends Table,
-    TSchema extends Record<string, unknown>
->(db: NodePgDatabase<TSchema>, table: T) {
-    return async (id: PrimaryKeyType<T>) => {
-        const { rowCount } = await db
-            .update(table as Table)
-            .set({ deletedAt: new Date() })
-            .where(and(eq(table.id, id), isNull(table.deletedAt)));
-        if (rowCount == 0) {
-            throw new NotFound(
-                `${getTableName(table)} with id ${id} not found`
+    findOne<S extends PgSelect>(select: S) {
+        return async (id: number) => {
+            const result = await select.where(
+                eq(this.table.id, id)
             );
+
+            if (result.length == 0) {
+                throw new Error(
+                    `${this.tableName} with id ${id} not found`
+                );
+            }
+
+            return result[0];
         }
     }
-}
 
-export function hardDelete<
-    T extends Table,
-    TSchema extends Record<string, unknown>
->(db: NodePgDatabase<TSchema>, table: T) {
-    return async (id: PrimaryKeyType<T>) => {
-        const { rowCount } = await db.delete(table)
-        if (rowCount == 0) {
-            throw new NotFound(
-                `${getTableName(table)} with id ${id} not found`
-            );
-        }
-    }
-}
+    findAll<S extends PgSelect<T["_"]["name"]>>(select: S) {
+        return async (options: FindAllOptions<T>) => {
+            const { offset, limit } = getPagination(options);
+            const conditions = getConditions(options, this.map);
 
-export function count<
-    T extends Table,
-    TSchema extends Record<string, unknown>,
->(
-    db: NodePgDatabase<TSchema>,
-    table: T,
-    map: FilterMap<T>,
-) {
-    return async (filters: Filter<T>) => {
-        const [result] = await db
-            .select({ count: drizzleCount() })
-            .from(table as PgTable)
-            .where(
-                and(
-                    isNull(table.deletedAt),
-                    buildWhere(filters, map)
+            const items = select
+                .where(
+                    and(
+                        isNull(this.table.deletedAt),
+                        ...conditions
+                    )
                 )
-            );
+                .limit(limit)
+                .offset(offset)
+                .execute();
 
-        return result.count;
+            return items as any as InferSelectModel<T>[];
+        }
+    }
+
+    create() {
+        return async (data: InferInsertModel<T>) => {
+            const [result] = await this.db
+                .insert(this.table)
+                .values(data)
+                .returning()
+                .catch(handleSqlError);
+            return result as InferSelectModel<T>;
+        }
+    }
+
+    update() {
+        return async (
+            id: PrimaryKeyType<T>,
+            data: Partial<InferInsertModel<T>>
+        ) => {
+            if (Object.keys(data).length == 0) {
+                throw new BadRequest("update needs at least one field");
+            }
+            const result = await this.db
+                .update(this.table)
+                .set(data)
+                .where(eq(this.table.id, id))
+                .returning()
+                .catch((e: any) => handleSqlError(e));
+
+            if (!result) {
+                throw new NotFound(
+                    `${this.tableName} with id ${id} not found`
+                );
+            }
+            return result;
+        }
+    }
+
+    softDelete() {
+        return async (id: PrimaryKeyType<T>) => {
+            const { rowCount } = await this.db
+                .update(this.table as Table)
+                .set({ deletedAt: new Date() })
+                .where(and(
+                    eq(this.table.id, id), 
+                    isNull(this.table.deletedAt))
+                );
+            if (rowCount == 0) {
+                throw new NotFound(
+                    `${this.tableName} with id ${id} not found`
+                );
+            }
+        }
+    }
+
+    hardDelete() {
+        return async (id: PrimaryKeyType<T>) => {
+            const { rowCount } = await this.db
+                .delete(this.table)
+                .where(eq(this.table.id, id));
+            if (rowCount == 0) {
+                throw new NotFound(
+                    `${this.tableName} with id ${id} not found`
+                );
+            }
+        }
+    }
+
+    count() {
+        return async (filters: Filter<T>) => {
+            const [result] = await this.db
+                .select({ count: drizzleCount() })
+                .from(this.table as PgTable)
+                .where(
+                    and(
+                        isNull(this.table.deletedAt),
+                        buildWhere(filters, this.map)
+                    )
+                );
+
+            return result.count;
+        }
     }
 }
