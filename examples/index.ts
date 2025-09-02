@@ -1,7 +1,7 @@
 import "dotenv/config"; // Importante cargar el .env
 import express from "express";
 import serviceRouter from "./router";
-import { errorHandler } from "brad";
+import { errorHandler } from "bradb";
 
 export const app = express();
 const port = process.env.PORT || 3000;

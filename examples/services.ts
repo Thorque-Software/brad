@@ -1,6 +1,6 @@
 import { db } from "./db"
-import { count, create, findAll, findOne, softDelete, update } from "brad";
-import { findAllRelational, findOneRelational } from "brad";
+import { count, create, findAll, findOne, softDelete, update } from "bradb";
+import { findAllRelational, findOneRelational } from "bradb";
 import { serviceTable } from "./schema"
 import { serviceFilterMap } from "./filter";
 

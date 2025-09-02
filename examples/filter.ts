@@ -1,5 +1,5 @@
 import { eq, ilike } from "drizzle-orm";
-import { FilterMap } from "brad";
+import { FilterMap } from "bradb";
 import { cityTable, serviceTable } from "./schema";
 
 export const serviceFilterMap: FilterMap<typeof serviceTable> = {
