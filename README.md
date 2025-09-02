@@ -61,11 +61,24 @@ const filterMap = {
     name: (value: string) => eq(serviceTable.name, value)
 };
 
-export const serviceService = new ServiceBuilder({
-    db: db,
-    table: serviceTable,
-    filterMap: filterMap,
-});
+const builder = new ServiceBuilder(db, serviceTable, filterMap);
+
+export const serviceService = {
+    create: builder.create(),
+    count: builder.count(),
+    delete: builder.softDelete(),
+    // or you can do a hard delete
+    // delete: builder.hardDelete,
+    update: builder.update(),
+    findAll: builder.findAll(
+        // Dont forget $dinamyc()
+        db.select().from(serviceTable).$dynamic()
+    ),
+    findOne: builder.findOne(
+        // agrega el where eq y el Custom Error
+        db.select().from(serviceTable).$dynamic()
+    ),
+}
 ```
 
 ### 3. Create the Controller
