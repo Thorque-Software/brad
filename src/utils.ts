@@ -1,10 +1,11 @@
 import { PgSelect, PgTable } from "drizzle-orm/pg-core";
 import { and, SQL } from "drizzle-orm";
 import { PaginationParams, Filter, FilterMap, FindAllOptions } from "./types";
+import { ZodObject } from "zod";
 
-export function buildWhere<T extends PgTable>(
-    filters: Filter<T>,
-    map: FilterMap<T>
+export function buildFilters<FSchema extends ZodObject>(
+    filters: Filter<FSchema>,
+    map: FilterMap<FSchema>
 ) {
     const conditions: SQL[] = [];
 
@@ -30,20 +31,19 @@ function withPagination<T extends PgSelect>(
 }
 
 function withFilters<
-    TTable extends PgTable,
+    FSchema extends ZodObject,
     S extends PgSelect
 >(
-    table: TTable,
     qb: S,
-    filters: Filter<TTable>,
-    map: FilterMap<TTable>
+    filters: Filter<FSchema>,
+    map: FilterMap<FSchema>
 ) {
-    return qb.where(buildWhere(filters, map));
+    return qb.where(buildFilters(filters, map));
 }
 
 export function getPagination<
-    T extends PgTable
->(options: FindAllOptions<T> = {}) {
+    FSchema extends ZodObject,
+>(options: FindAllOptions<FSchema> = {}) {
     const page = options.pagination?.page || 1;
     const limit = options.pagination?.pageSize || 10;
     const offset = (page - 1) * limit;
@@ -52,13 +52,13 @@ export function getPagination<
 }
 
 export function getConditions<
-    T extends PgTable
->(options: FindAllOptions<any> = {}, map: FilterMap<T>) {
+    FSchema extends ZodObject,
+>(options: FindAllOptions<FSchema>, map: FilterMap<FSchema>) {
     const { filters } = options;
 
     const conditions: (SQL<unknown>[] | undefined) = [];
     if (filters) {
-        const whereSql = buildWhere(filters, map);
+        const whereSql = buildFilters(filters, map);
         conditions.push(whereSql as any);
     }
 

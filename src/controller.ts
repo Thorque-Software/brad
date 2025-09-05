@@ -1,27 +1,22 @@
 import {
     InferInsertModel,
-    InferSelectModel
 } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { Request, Response } from "express";
 import { z } from "zod";
-import { CRUDService, Filter, PaginationParams } from "./types";
-
-interface BaseSchema<T extends PgTable> {
-    base: z.ZodObject;
-    filter: z.ZodSchema<Partial<InferSelectModel<T>>>;
-}
+import { CRUDService, PaginationParams } from "./types";
 
 export class BaseController<T extends PgTable> {
     protected service: CRUDService;
-    private schema: BaseSchema<T>;
+
+    private filterSchema: z.ZodObject;
     private createSchema: z.ZodSchema<InferInsertModel<T>>;
     private updateSchema: z.ZodSchema<Partial<InferInsertModel<T>>>;
 
     constructor(
         service: CRUDService,
         base: z.ZodObject,
-        filter: z.ZodSchema<Partial<T["$inferSelect"]>>
+        filter: z.ZodObject    
     ) {
         this.service = service;
 
@@ -35,11 +30,11 @@ export class BaseController<T extends PgTable> {
         this.updateSchema = base.partial() as z.ZodSchema<
             Partial<InferInsertModel<T>>
         >;
-        this.schema = { base, filter };
+        this.filterSchema = filter;
     }
 
     getAll = async (req: Request, res: Response) => {
-        const filters = getFilters(req, this.schema.filter);
+        const filters = getFilters(req, this.filterSchema);
         const pagination = getPagination(req);
         const [items, total] = await Promise.all([
             this.service.findAll({ pagination, filters }),
@@ -79,11 +74,9 @@ export class BaseController<T extends PgTable> {
 /*
     * Extract the filters from the Request
 */
-function getFilters<
-    T extends PgTable
->(
+function getFilters(
     req: Request,
-    filter: z.ZodSchema<Filter<T>>
+    filter: z.ZodObject
 ) {
     return filter.parse({
         ...req.params,

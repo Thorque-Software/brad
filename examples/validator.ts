@@ -13,15 +13,6 @@ export const serviceSchema = z.object({
     deletedAt: z.date().nullable()
 });
 
-export const serviceFilterSchema = serviceSchema
-.pick({
-    name: true,
-    serviceTypeId: true,
-    providerId: true
-})
-.partial();
-export type ServiceFilterSchema = z.infer<typeof serviceFilterSchema>;
-
 export const serviceCreateSchema = serviceSchema.omit({
     id: true,
     deletedAt: true
