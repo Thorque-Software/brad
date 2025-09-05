@@ -1,5 +1,6 @@
-import { InferInsertModel, InferSelectModel, SQL } from "drizzle-orm";
+import { SQL } from "drizzle-orm";
 import { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import z from "zod";
 
 export interface CRUDService {
     findOne: (id: any) => Promise<any>; 
@@ -29,9 +30,9 @@ export interface PaginationParams {
     pageSize: number;
 }
 
-export interface FindAllOptions<T extends PgTable> {
+export interface FindAllOptions<FSchema extends z.ZodObject> {
     pagination?: PaginationParams;
-    filters?: Filter<T>;
+    filters?: Filter<FSchema>;
 }
 
 export type Table = PgTable & {
@@ -41,8 +42,10 @@ export type Table = PgTable & {
 
 export type PrimaryKeyType<T extends PgTable> = T["_"]["columns"]["id"]["_"]["data"];
 
-export type Filter<T extends PgTable> = Partial<T["$inferSelect"]>;
+export type FilterMap<Schema extends z.ZodObject> = {
+    [K in keyof z.infer<Schema>]?: (value: z.infer<Schema>[K]) => SQL;
+}
 
-export type FilterMap<T extends PgTable> = {
-    [K in keyof T["$inferSelect"]]?: (value: T["$inferSelect"][K]) => SQL;
-};
+export type Filter<Schema extends z.ZodObject> = {
+    [K in keyof z.infer<Schema>]?: z.infer<Schema>[K];
+}

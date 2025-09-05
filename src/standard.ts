@@ -4,19 +4,21 @@ import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
     count as drizzleCount, 
     getTableName, InferInsertModel, InferSelectModel, isNull } from "drizzle-orm";
-import { buildWhere, getConditions, getPagination } from "./utils";
+import { buildFilters, getConditions, getPagination } from "./utils";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
+import { ZodObject } from "zod";
 
 export class ServiceBuilder<
     T extends Table,
     TSchema extends Record<string, unknown>,
+    FSchema extends ZodObject
 >{
     private readonly db: NodePgDatabase<TSchema>;
     private readonly table: T;
-    private readonly map: FilterMap<T>
+    private readonly map: FilterMap<FSchema>
     readonly tableName: string;
 
-    constructor(db: NodePgDatabase<TSchema>, table: T, map: FilterMap<T>) {
+    constructor(db: NodePgDatabase<TSchema>, table: T, map: FilterMap<FSchema>) {
         this.db = db;
         this.table = table;
         this.tableName = getTableName(table);
@@ -38,7 +40,7 @@ export class ServiceBuilder<
     }
 
     findAll<S extends PgSelect<T["_"]["name"]>>(select: S) {
-        return async (options: FindAllOptions<T>) => {
+        return async (options: FindAllOptions<FSchema>) => {
             const { offset, limit } = getPagination(options);
             const conditions = getConditions(options, this.map);
 
@@ -117,14 +119,14 @@ export class ServiceBuilder<
     }
 
     count() {
-        return async (filters: Filter<T>) => {
+        return async (filters: Filter<FSchema>) => {
             const [result] = await this.db
                 .select({ count: drizzleCount() })
                 .from(this.table as PgTable)
                 .where(
                     and(
                         isNull(this.table.deletedAt),
-                        buildWhere(filters, this.map)
+                        buildFilters(filters, this.map)
                     )
                 );
 
