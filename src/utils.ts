@@ -4,41 +4,46 @@ import { PaginationParams, Filter, FilterMap, FindAllOptions } from "./types";
 import { ZodObject } from "zod";
 
 export function buildFilters<FSchema extends ZodObject>(
-    filters: Filter<FSchema>,
-    map: FilterMap<FSchema>
+    map: FilterMap<FSchema>,
+    filters?: Filter<FSchema>
 ) {
     const conditions: SQL[] = [];
 
-    // iteramos sólo sobre las claves de 'map'
-    for (const key of Object.keys(map) as (keyof Filter<FSchema>)[]) {
-        const value = filters[key];
-        if (value !== undefined && value !== null) {
-            // TS sabe que `value` es M[typeof key]
-            if (map[key]) {
-                conditions.push(map[key](value));
+    if (!filters) return undefined;
+
+    for (const f of Object.keys(filters) as (keyof Filter<FSchema>)[]) {
+        if (f in map) {
+            const func = map[f];
+            const value = filters[f];
+            if (value !== undefined && value !== null) {
+                conditions.push(func(value));
             }
         }
     }
+
+    // // iteramos sólo sobre las claves de 'map'
+    // for (const key of Object.keys(map) as (keyof Filter<FSchema>)[]) {
+    //     const value = filters[key];
+    //     if (value !== undefined && value !== null) {
+    //         // TS sabe que `value` es M[typeof key]
+    //         if (map[key]) {
+    //             conditions.push(map[key](value));
+    //         }
+    //     }
+    // }
 
     return conditions.length ? and(...conditions) : undefined;
 }
 
 export function withPagination<T extends PgSelect>(
     qb: T,
-    pagination: PaginationParams
+    pagination?: PaginationParams
 ) {
-    return qb.limit(pagination.pageSize).offset(pagination.page * pagination.pageSize);
-}
+    const page = pagination?.page || 1;
+    const limit = pagination?.pageSize || 10;
+    const offset = (page - 1) * limit;
 
-function withFilters<
-    FSchema extends ZodObject,
-    S extends PgSelect
->(
-    qb: S,
-    filters: Filter<FSchema>,
-    map: FilterMap<FSchema>
-) {
-    return qb.where(buildFilters(filters, map));
+    return qb.limit(page).offset(offset);
 }
 
 export function getPagination<
@@ -49,18 +54,4 @@ export function getPagination<
     const offset = (page - 1) * limit;
 
     return { offset, limit }
-}
-
-export function getConditions<
-    FSchema extends ZodObject,
->(options: FindAllOptions<FSchema>, map: FilterMap<FSchema>) {
-    const { filters } = options;
-
-    const conditions: SQL[] = [];
-    if (filters) {
-        const whereSql = buildFilters(filters, map);
-        conditions.push(whereSql as any);
-    }
-
-    return conditions;
 }

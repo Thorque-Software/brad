@@ -3,8 +3,9 @@ import { PgSelect, PgTable } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
     count as drizzleCount, 
-    getTableName, InferInsertModel, InferSelectModel, isNull } from "drizzle-orm";
-import { buildFilters, getConditions, getPagination, withPagination } from "./utils";
+    getTableName, InferInsertModel, InferSelectModel, isNull, 
+    } from "drizzle-orm";
+import { buildFilters, withPagination } from "./utils";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
 import { ZodObject } from "zod";
 
@@ -39,13 +40,10 @@ export class ServiceBuilder<
 
     findAll<S extends PgSelect>(select: S) {
         return async (options: FindAllOptions<FSchema>) => {
-            // const { offset, limit } = getPagination(options);
-            // const conditions = getConditions(options, this.map);
-
             const items = withPagination(select
                 .where(and(
                     isNull(this.table.deletedAt),
-                    buildFilters(options.filters, this.map)
+                    buildFilters(this.map, options.filters)
                 )), options.pagination)
 
             return items;
@@ -119,7 +117,7 @@ export class ServiceBuilder<
                 .where(
                     and(
                         isNull(this.table.deletedAt),
-                        buildFilters(filters, this.map)
+                        buildFilters(this.map, filters)
                     )
                 );
 

@@ -5,7 +5,7 @@ import { getPagination, buildFilters } from "./utils";
 import { ZodObject } from "zod";
 import { NotFound } from "./errors";
 
-export function relationalBuilder<
+export function RelationalBuilder<
     TSchema extends TablesRelationalConfig,
     TFields extends TableRelationalConfig,
     FSchema extends ZodObject,
@@ -18,15 +18,14 @@ export function relationalBuilder<
 
     return {
         findAll(config: DBQueryConfig<any, true, TSchema, TTableConfig>) {
-            return async (options: FindAllOptions<any>) => {
+            return async (options: FindAllOptions<FSchema>) => {
                 const { offset, limit } = getPagination(options);
-                // const conditions = getConditions(options, filterMap);
 
                 const items = q.findMany({
                     ...config,
                     where: (table) => and(
                         baseWhere(table as any),
-                        buildFilters(options.filters, filterMap)
+                        buildFilters(filterMap, options.filters)
                     ),
                     limit,
                     offset
@@ -41,8 +40,8 @@ export function relationalBuilder<
                 const result = await q.findFirst({
                     ...config,
                     // TODO: Validate table contains 'id' field
-                    where: (table, { eq, isNull }) => and(
-                        isNull((table as any).deletedAt),
+                    where: (table, { eq }) => and(
+                        baseWhere(table as any),
                         eq((table as any).id, id),
                     )
                 });
