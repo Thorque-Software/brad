@@ -4,7 +4,7 @@ import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
     count as drizzleCount, 
     getTableName, InferInsertModel, InferSelectModel, isNull } from "drizzle-orm";
-import { buildFilters, getConditions, getPagination } from "./utils";
+import { buildFilters, getConditions, getPagination, withPagination } from "./utils";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
 import { ZodObject } from "zod";
 
@@ -27,35 +27,28 @@ export class ServiceBuilder<
 
     findOne<S extends PgSelect>(select: S) {
         return async (id: number) => {
-            const result = await select.where(
+            const result = select.where(
                 eq(this.table.id, id)
             );
 
-            if (result.length == 0) {
-                throw notFoundWithId(this.tableName, id);
-            }
+            if (!result) throw notFoundWithId(this.tableName, id);
 
-            return result[0];
+            return result;
         }
     }
 
-    findAll<S extends PgSelect<T["_"]["name"]>>(select: S) {
+    findAll<S extends PgSelect>(select: S) {
         return async (options: FindAllOptions<FSchema>) => {
-            const { offset, limit } = getPagination(options);
-            const conditions = getConditions(options, this.map);
+            // const { offset, limit } = getPagination(options);
+            // const conditions = getConditions(options, this.map);
 
-            const items = select
-                .where(
-                    and(
-                        isNull(this.table.deletedAt),
-                        ...conditions
-                    )
-                )
-                .limit(limit)
-                .offset(offset)
-                .execute();
+            const items = withPagination(select
+                .where(and(
+                    isNull(this.table.deletedAt),
+                    buildFilters(options.filters, this.map)
+                )), options.pagination)
 
-            return items as any as InferSelectModel<T>[];
+            return items;
         }
     }
 
@@ -138,4 +131,3 @@ export class ServiceBuilder<
 function notFoundWithId(tableName: string, id: any) {
     return new NotFound(`${tableName} with id ${id} not found`);
 }
-

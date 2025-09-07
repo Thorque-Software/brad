@@ -1,62 +1,62 @@
 import { FilterMap, FindAllOptions } from "../src/types";
-import { and, DBQueryConfig, TableRelationalConfig, TablesRelationalConfig } from "drizzle-orm";
+import { and, DBQueryConfig, isNull, TableRelationalConfig, TablesRelationalConfig } from "drizzle-orm";
 import { RelationalQueryBuilder } from "drizzle-orm/pg-core/query-builders/query";
-import { getPagination, getConditions } from "./utils";
+import { getPagination, buildFilters } from "./utils";
+import { ZodObject } from "zod";
+import { NotFound } from "./errors";
 
-export function findAllRelational<
+export function relationalBuilder<
     TSchema extends TablesRelationalConfig,
     TFields extends TableRelationalConfig,
+    FSchema extends ZodObject,
     TTableConfig extends TableRelationalConfig = TableRelationalConfig,
 >(
-    map: FilterMap<any>,
     q: RelationalQueryBuilder<TSchema, TFields>,
-    config: DBQueryConfig<any, true, TSchema, TTableConfig>
+    filterMap: FilterMap<FSchema>, 
 ) {
-    return async (options: FindAllOptions<any>) => {
-        const { offset, limit } = getPagination(options);
-        const conditions = getConditions(options, map);
+    const baseWhere = (table: TFields) => isNull((table as any).deletedAt);
 
-        const items = q.findMany({
-            ...config,
-            where: (table, { isNull }) => and(
-                isNull((table as any).deletedAt),
-                ...conditions
-            ),
-            limit: limit,
-            offset: offset
-        });
+    return {
+        findAll(config: DBQueryConfig<any, true, TSchema, TTableConfig>) {
+            return async (options: FindAllOptions<any>) => {
+                const { offset, limit } = getPagination(options);
+                // const conditions = getConditions(options, filterMap);
 
-        return items;
-    }
-}
+                const items = q.findMany({
+                    ...config,
+                    where: (table) => and(
+                        baseWhere(table as any),
+                        buildFilters(options.filters, filterMap)
+                    ),
+                    limit,
+                    offset
+                });
 
-export function findOneRelational<
-    TSchema extends TablesRelationalConfig,
-    TFields extends TableRelationalConfig,
-    TTableConfig extends TableRelationalConfig = TableRelationalConfig
->(
-    q: RelationalQueryBuilder<TSchema, TFields>,
-    config: DBQueryConfig<any, true, TSchema, TTableConfig>
-) {
-    return async (id: number) => {
-        const result = await q.findFirst({
-            ...config,
-            // TODO: Validate table contains 'id' field
-            where: (table, { eq, isNull }) => and(
-                isNull((table as any).deletedAt),
-                eq((table as any).id, id),
-            )
-        });
+                return items;
+            }
+        },
 
-        if (!result) {
-            // TODO: proper name
-            const t = "tabla";
-            throw new Error(
-                `${t} with id ${id} not found`
-            );
+        findOne(config: DBQueryConfig<any, true, TSchema, TTableConfig>) {
+            return async (id: number) => {
+                const result = await q.findFirst({
+                    ...config,
+                    // TODO: Validate table contains 'id' field
+                    where: (table, { eq, isNull }) => and(
+                        isNull((table as any).deletedAt),
+                        eq((table as any).id, id),
+                    )
+                });
+
+                if (!result) {
+                    // TODO: proper name
+                    const t = "record";
+                    throw new NotFound(
+                        `${t} with id ${id} not found`
+                    );
+                }
+
+                return result;
+            }
         }
-
-        return result;
     }
 }
-

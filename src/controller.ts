@@ -6,17 +6,20 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { CRUDService, PaginationParams } from "./types";
 
-export class BaseController<T extends PgTable> {
-    protected service: CRUDService;
+export class BaseController<
+    T extends PgTable,
+    FSchema extends z.ZodObject
+> {
+    protected service: CRUDService<FSchema>;
 
-    private filterSchema: z.ZodObject;
+    private filterSchema: FSchema;
     private createSchema: z.ZodSchema<InferInsertModel<T>>;
     private updateSchema: z.ZodSchema<Partial<InferInsertModel<T>>>;
 
     constructor(
-        service: CRUDService,
+        service: CRUDService<FSchema>,
         base: z.ZodObject,
-        filter: z.ZodObject    
+        filter: FSchema    
     ) {
         this.service = service;
 
@@ -74,9 +77,9 @@ export class BaseController<T extends PgTable> {
 /*
     * Extract the filters from the Request
 */
-function getFilters(
+function getFilters<FSchema extends z.ZodObject>(
     req: Request,
-    filter: z.ZodObject
+    filter: FSchema
 ) {
     return filter.parse({
         ...req.params,

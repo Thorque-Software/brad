@@ -1,4 +1,4 @@
-import { PgSelect, PgTable } from "drizzle-orm/pg-core";
+import { PgSelect } from "drizzle-orm/pg-core";
 import { and, SQL } from "drizzle-orm";
 import { PaginationParams, Filter, FilterMap, FindAllOptions } from "./types";
 import { ZodObject } from "zod";
@@ -10,9 +10,9 @@ export function buildFilters<FSchema extends ZodObject>(
     const conditions: SQL[] = [];
 
     // iteramos sólo sobre las claves de 'map'
-    for (const key of Object.keys(map)) {
+    for (const key of Object.keys(map) as (keyof Filter<FSchema>)[]) {
         const value = filters[key];
-        if (value !== undefined) {
+        if (value !== undefined && value !== null) {
             // TS sabe que `value` es M[typeof key]
             if (map[key]) {
                 conditions.push(map[key](value));
@@ -23,7 +23,7 @@ export function buildFilters<FSchema extends ZodObject>(
     return conditions.length ? and(...conditions) : undefined;
 }
 
-function withPagination<T extends PgSelect>(
+export function withPagination<T extends PgSelect>(
     qb: T,
     pagination: PaginationParams
 ) {
@@ -56,7 +56,7 @@ export function getConditions<
 >(options: FindAllOptions<FSchema>, map: FilterMap<FSchema>) {
     const { filters } = options;
 
-    const conditions: (SQL<unknown>[] | undefined) = [];
+    const conditions: SQL[] = [];
     if (filters) {
         const whereSql = buildFilters(filters, map);
         conditions.push(whereSql as any);

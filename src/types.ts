@@ -1,11 +1,11 @@
 import { SQL } from "drizzle-orm";
 import { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import z from "zod";
+import z, { ZodObject } from "zod";
 
-export interface CRUDService {
+export interface CRUDService<FSchema extends ZodObject> {
     findOne: (id: any) => Promise<any>; 
-    findAll: (options: FindAllOptions<any>) => Promise<any>;
-    count:  (filters: Filter<any>) => Promise<number>;
+    findAll: (options: FindAllOptions<FSchema>) => Promise<any>;
+    count:  (filters: Filter<FSchema>) => Promise<number>;
     create: (data: any) => Promise<any>;
     update: (id: any, data: Partial<any>) => Promise<any>;
     delete: (id: any) => Promise<any>;
@@ -30,7 +30,7 @@ export interface PaginationParams {
     pageSize: number;
 }
 
-export interface FindAllOptions<FSchema extends z.ZodObject> {
+export interface FindAllOptions<FSchema extends ZodObject> {
     pagination?: PaginationParams;
     filters?: Filter<FSchema>;
 }
@@ -42,10 +42,12 @@ export type Table = PgTable & {
 
 export type PrimaryKeyType<T extends PgTable> = T["_"]["columns"]["id"]["_"]["data"];
 
-export type FilterMap<Schema extends z.ZodObject> = {
-    [K in keyof z.infer<Schema>]?: (value: z.infer<Schema>[K]) => SQL;
-}
+export type FilterMap<
+    Schema extends z.ZodObject,
+    Out = z.infer<Schema>
+> = {
+    [K in keyof Out]: (value: NonNullable<Out[K]>) => SQL;
+};
 
-export type Filter<Schema extends z.ZodObject> = {
-    [K in keyof z.infer<Schema>]?: z.infer<Schema>[K];
-}
+// just a rename
+export type Filter<Schema extends ZodObject> = z.infer<Schema>;

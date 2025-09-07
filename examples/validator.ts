@@ -13,6 +13,17 @@ export const serviceSchema = z.object({
     deletedAt: z.date().nullable()
 });
 
+export const providerSchema = z.object({
+    id: z.number(),
+    fullname: z.string(),
+    email: z.string().email(),
+    phoneNumber: z.string().optional(),
+    cuil: z.string(),
+    cityId: z.number(),
+    userId: z.number(),
+    deletedAt: z.date().nullable()
+});
+
 export const serviceCreateSchema = serviceSchema.omit({
     id: true,
     deletedAt: true
