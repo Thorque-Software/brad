@@ -1,11 +1,11 @@
-import { Filter, FilterMap, FindAllOptions, PrimaryKeyType, Table } from "./types";
+import { Filter, FilterMap, PrimaryKeyType, Table } from "./types";
 import { PgSelect, PgTable } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
     count as drizzleCount, 
     getTableName, InferInsertModel, InferSelectModel, isNull, 
     } from "drizzle-orm";
-import { buildFilters, withPagination } from "./utils";
+import { buildFilters } from "./filters";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
 import { ZodObject } from "zod";
 
@@ -28,7 +28,7 @@ export class ServiceBuilder<
 
     findOne<S extends PgSelect>(select: S) {
         return async (id: number) => {
-            const result = select.where(
+            const result = await select.where(
                 eq(this.table.id, id)
             );
 
@@ -39,14 +39,16 @@ export class ServiceBuilder<
     }
 
     findAll<S extends PgSelect>(select: S) {
-        return async (options: FindAllOptions<FSchema>) => {
-            const items = withPagination(select
+        return async (filters?: Filter<FSchema>, page: number = 1, pageSize: number = 10) => {
+            const offset = (page - 1) * pageSize;
+
+            return await select
                 .where(and(
                     isNull(this.table.deletedAt),
-                    buildFilters(this.map, options.filters)
-                )), options.pagination)
-
-            return items;
+                    buildFilters(this.map, filters)
+                ))
+                .limit(pageSize) 
+                .offset(offset)
         }
     }
 
@@ -110,7 +112,7 @@ export class ServiceBuilder<
     }
 
     count() {
-        return async (filters: Filter<FSchema>) => {
+        return async (filters?: Filter<FSchema>) => {
             const [result] = await this.db
                 .select({ count: drizzleCount() })
                 .from(this.table as PgTable)

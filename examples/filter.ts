@@ -1,5 +1,5 @@
 import { FilterMap } from "bradb";
-import { eq, ilike } from "drizzle-orm";
+import { eq, ilike, inArray } from "drizzle-orm";
 import { providerTable, serviceTable } from "./schema";
 import { db } from "./db";
 import z from "zod";
@@ -28,20 +28,19 @@ export const serviceFilterMap: FilterMap<typeof serviceFilterSchema> = {
     name: (value) => ilike(serviceTable.name, `%${value}%`),
     serviceTypeId: (value) => eq(serviceTable.serviceTypeId, value),
     providerId: (value) => eq(serviceTable.providerId, value),
-    providerEmail: (email) => eq(
-        serviceTable.providerId,
+    providerEmail: (email) => eq(serviceTable.providerId,
         db.select({ id: providerTable.id })
         .from(providerTable)
         .where(
             eq(providerTable.email, email)
-        ),
+        )
     ),
     // providerCuil: providerFilterMap.cuil,
-    providerCuil: (cuil) => eq(serviceTable.providerId,
-        db.select({ id: providerTable.id })
+    providerCuil: (cuil) => inArray(serviceTable.providerId,
+        db.select({id: providerTable.id})
         .from(providerTable)
         .where(
             eq(providerTable.cuil, cuil)
-        ),
+        )
     ),
 }

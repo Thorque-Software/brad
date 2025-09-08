@@ -40,7 +40,7 @@ export class BaseController<
         const filters = getFilters(req, this.filterSchema);
         const pagination = getPagination(req);
         const [items, total] = await Promise.all([
-            this.service.findAll({ pagination, filters }),
+            this.service.findAll(filters, pagination.page, pagination.pageSize),
             this.service.count(filters)
         ]);
 

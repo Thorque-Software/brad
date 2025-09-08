@@ -1,10 +1,10 @@
 import { SQL } from "drizzle-orm";
-import { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { AnyPgTable, PgColumn, PgTable } from "drizzle-orm/pg-core";
 import z, { ZodObject } from "zod";
 
 export interface CRUDService<FSchema extends ZodObject> {
     findOne: (id: any) => Promise<any>; 
-    findAll: (options: FindAllOptions<FSchema>) => Promise<any>;
+    findAll: (filters?: Filter<FSchema>, page?: number, pageSize?: number) => Promise<any>;
     count:  (filters: Filter<FSchema>) => Promise<number>;
     create: (data: any) => Promise<any>;
     update: (id: any, data: Partial<any>) => Promise<any>;
@@ -24,23 +24,28 @@ export interface CRUDService<FSchema extends ZodObject> {
 //     update: (id: PrimaryKeyType, data: Partial<Insert>) => Promise<Select>;
 //     softDelete: (id: PrimaryKeyType) => Promise<Select>;
 // }
+//
+//
+
+export type PrimaryKeyData<TTable extends AnyPgTable> = {
+    [K in keyof TTable["_"]["columns"]
+        as TTable["_"]["columns"][K] extends { _: { isPrimaryKey: true } }
+            ? K
+            : never
+    ]: TTable["_"]["columns"][K]["_"]["data"];
+};
 
 export interface PaginationParams {
     page: number;
     pageSize: number;
 }
 
-export interface FindAllOptions<FSchema extends ZodObject> {
-    pagination?: PaginationParams;
-    filters?: Filter<FSchema>;
-}
-
-export type Table = PgTable & {
+export type Table = AnyPgTable & {
     id: PgColumn;
     deletedAt: PgColumn;
 };
 
-export type PrimaryKeyType<T extends PgTable> = T["_"]["columns"]["id"]["_"]["data"];
+export type PrimaryKeyType<T extends AnyPgTable> = T["_"]["columns"]["id"]["_"]["data"];
 
 export type FilterMap<
     Schema extends z.ZodObject,
