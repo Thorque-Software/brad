@@ -46,7 +46,7 @@ export const serviceService = {
         }
     }),
     findOne: builder.findOne(// agrega el where eq y el Custom Error
-        db.select().from(serviceTable).$dynamic()
+        db.select({name: serviceTable.name}).from(serviceTable).$dynamic()
     ),
     findOneRelational: rb.findOne({
         columns: {
@@ -58,14 +58,6 @@ export const serviceService = {
     })
 }
 
-function findMany<
-    TConfig extends DBQueryConfig<'many', true, TSchema, TFields>
->(
-    config?: KnownKeysOnly<TConfig, DBQueryConfig<'many', true, TSchema, TFields>>
- ): PgRelationalQuery<BuildQueryResult<TSchema, TFields, TConfig>[]>;
-
-
- findFirst<TSelection extends Omit<DBQueryConfig<'many', true, TSchema, TFields>, 'limit'>>(config?: KnownKeysOnly<TSelection, Omit<DBQueryConfig<'many', true, TSchema, TFields>, 'limit'>>): PgRelationalQuery<BuildQueryResult<TSchema, TFields, TSelection> | undefined>;
-
-type a = typeof db.query.serviceTable.findFirst;
-type b = typeof rb.findAll;
+type c = typeof db.select().from(serviceTable);
+type a = Awaited<typeof serviceService.findOne>;
+type b = typeof serviceService.findAll;

@@ -27,14 +27,16 @@ export class ServiceBuilder<
     }
 
     findOne<S extends PgSelect>(select: S) {
-        return async (id: number) => {
+        type Row = Awaited<ReturnType<S["execute"]>>[number];
+
+        return async (id: number): Promise<Row> => {
             const result = await select.where(
                 eq(this.table.id, id)
             );
 
-            if (!result) throw notFoundWithId(this.tableName, id);
+            if (result.length == 0) throw notFoundWithId(this.tableName, id);
 
-            return result;
+            return result[0];
         }
     }
 
