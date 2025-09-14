@@ -1,95 +1,87 @@
-import {
-    InferInsertModel,
-} from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { Request, Response } from "express";
-import { z } from "zod";
-import { CRUDService, PaginationParams } from "./types";
+import { z, ZodObject } from "zod";
+import { CreateService, DeleteService, UpdateService, FindOneService, PaginationParams, RetrieverService } from "./types";
 
-export class BaseController<
-    T extends PgTable,
-    FSchema extends z.ZodObject
-> {
-    protected service: CRUDService<FSchema>;
-
-    private filterSchema: FSchema;
-    private createSchema: z.ZodSchema<InferInsertModel<T>>;
-    private updateSchema: z.ZodSchema<Partial<InferInsertModel<T>>>;
-
-    constructor(
-        service: CRUDService<FSchema>,
-        base: z.ZodObject,
-        filter: FSchema    
-    ) {
-        this.service = service;
-
-        // @ts-expect-error infer schema
-        this.createSchema = base.omit({
-            id: true,
-            deletedAt: true
-        }) as z.ZodSchema<InferInsertModel<T>>;
-
-        // @ts-expect-error infer schema
-        this.updateSchema = base.partial() as z.ZodSchema<
-            Partial<InferInsertModel<T>>
-        >;
-        this.filterSchema = filter;
+export function findOneBuilder<TTable extends PgTable>(
+    service: FindOneService<TTable>,
+    hook?: (item: TTable["$inferSelect"]) => Response
+) {
+    async (req: Request, res: Response) => {
+        const item = await service.findOne(req.params.id);
+        if (hook !== undefined) {
+            return hook(item);
+        } else {
+            res.status(200).json(item);
+        }
     }
-
-    getAll = async (req: Request, res: Response) => {
-        const filters = getFilters(req, this.filterSchema);
-        const pagination = getPagination(req);
-        const [items, total] = await Promise.all([
-            this.service.findAll(filters, pagination.page, pagination.pageSize),
-            this.service.count(filters)
-        ]);
-
-        res.status(200).json({
-            pagination,
-            items,
-            total
-        });
-    };
-
-    getById = async (req: Request, res: Response) => {
-        const item = await this.service.findOne(req.params.id);
-        res.status(200).json(item);
-    };
-
-    create = async (req: Request, res: Response) => {
-        const data = this.createSchema.parse(req.body);
-        const item = await this.service.create(data);
-        res.status(201).json(item);
-    };
-
-    update = async (req: Request, res: Response) => {
-        const data = this.updateSchema.parse(req.body);
-        const item = await this.service.update(req.params.id, data);
-        res.status(200).json(item);
-    };
-
-    delete = async (req: Request, res: Response) => {
-        await this.service.delete(req.params.id);
-        res.status(204).send();
-    };
 }
 
-/*
-    * Extract the filters from the Request
-*/
-function getFilters<FSchema extends z.ZodObject>(
-    req: Request,
-    filter: FSchema
+export function findAllBuilder<FSchema extends ZodObject, TTable extends PgTable>(
+    service: RetrieverService<FSchema, TTable>, 
+    filter: FSchema,
+    hook?: (items: TTable["$inferSelect"][], total: number) => Response
 ) {
-    return filter.parse({
-        ...req.params,
-        ...req.query
+    return async (req: Request, res: Response) => {
+        const filters = filter.parse({
+            ...req.params,
+            ...req.query
+        });
+        const pagination = getPagination(req);
+        const [items, total] = await Promise.all([
+            service.findAll(filters, pagination.page, pagination.pageSize),
+            service.count(filters)
+        ]);
+
+        if (hook !== undefined) {
+            return hook(items, total);
+        } else {
+            return res.status(200).json({
+                pagination,
+                items,
+                total
+            });
+        }
+    }
+}
+
+export function createBuilder<TTable extends PgTable, Schema extends ZodObject>(
+    service: CreateService<TTable>,
+    schema: Schema
+) {
+    return validate(schema, async (req, res, data) => {
+        const item = await service.create(data);
+        return res.status(201).json(item);
     });
 }
 
-/*
-    * Extract PaginationParams from the request
-*/
+export function updateBuilder<TTable extends PgTable, Schema extends ZodObject>(
+    service: UpdateService<TTable>,
+    schema: Schema
+) {
+    return validate(schema, async (req, res, data) => {
+        const item = await service.update(req.params.id, data);
+        return res.status(200).json(item);
+    });
+}
+
+export function deleteBuilder<TTable extends PgTable>(service: DeleteService<TTable>) {
+    return async (req: Request, res: Response) => {
+        await service.delete(req.params.id);
+        return res.status(204).send();
+    }
+}
+
+export function validate<T extends ZodObject>(
+    schema: T,
+    fn: (req: Request, res: Response, data: z.output<T>) => Promise<Response>
+) {
+    return async (req: Request, res: Response) => {
+        const validated = schema.parse(req.body);
+        return fn(req, res, validated);
+    }
+}
+
 function getPagination(req: Request) {
     return {
         page: req.query.page ? parseInt(req.query.page as string) : 1,
@@ -98,4 +90,3 @@ function getPagination(req: Request) {
             : 10
     } as PaginationParams;
 }
-

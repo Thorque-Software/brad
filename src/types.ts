@@ -1,31 +1,27 @@
-import { SQL } from "drizzle-orm";
+import { InferSelectModel, SQL } from "drizzle-orm";
 import { AnyPgTable, PgColumn, PgTable } from "drizzle-orm/pg-core";
 import z, { ZodObject } from "zod";
 
-export interface CRUDService<FSchema extends ZodObject> {
-    findOne: (id: any) => Promise<any>; 
-    findAll: (filters?: Filter<FSchema>, page?: number, pageSize?: number) => Promise<any>;
+export interface RetrieverService<FSchema extends ZodObject, TTable extends PgTable> {
+    findAll: (filters?: Filter<FSchema>, page?: number, pageSize?: number) => Promise<TTable["$inferSelect"][]>;
     count:  (filters: Filter<FSchema>) => Promise<number>;
-    create: (data: any) => Promise<any>;
-    update: (id: any, data: Partial<any>) => Promise<any>;
-    delete: (id: any) => Promise<any>;
 }
 
-// export interface CRUDService<
-//     T extends PgTable,
-//     PrimaryKeyType = T["_"]["columns"]["id"]["_"]["data"],
-//     Insert = InferInsertModel<T>,
-//     Select = Partial<InferSelectModel<T>>
-// > {
-//     findOne: (id: PrimaryKeyType) => Promise<Select>; 
-//     findAll: (options: FindAllOptions<T>) => Promise<Select[]>;
-//     count:  (options: FindAllOptions<T>) => Promise<{count: number}>;
-//     create: (data: Insert) => Promise<Select>;
-//     update: (id: PrimaryKeyType, data: Partial<Insert>) => Promise<Select>;
-//     softDelete: (id: PrimaryKeyType) => Promise<Select>;
-// }
-//
-//
+export interface FindOneService<TTable extends PgTable> {
+    findOne: (id: any) => Promise<InferSelectModel<TTable>>;  
+}
+
+export interface CreateService<TTable extends PgTable> {
+    create: (data: TTable["$inferInsert"]) => Promise<TTable["$inferSelect"]>;
+}
+
+export interface UpdateService<TTable extends PgTable> {
+    update: (id: any, data: Partial<TTable["$inferInsert"]>) => Promise<TTable["$inferSelect"]>;
+}
+
+export interface DeleteService<TTable extends PgTable> {
+    delete: (id: any) => Promise<TTable["$inferSelect"]>;
+}
 
 export type PrimaryKeyData<TTable extends AnyPgTable> = {
     [K in keyof TTable["_"]["columns"]
