@@ -1,4 +1,4 @@
-import { InferSelectModel, SQL } from "drizzle-orm";
+import { SQL } from "drizzle-orm";
 import { AnyPgTable, PgColumn, PgTable } from "drizzle-orm/pg-core";
 import z, { ZodObject } from "zod";
 
@@ -8,7 +8,7 @@ export interface RetrieverService<FSchema extends ZodObject, TTable extends PgTa
 }
 
 export interface FindOneService<TTable extends PgTable> {
-    findOne: (id: any) => Promise<InferSelectModel<TTable>>;  
+    findOne: (id: any) => Promise<TTable["$inferSelect"]>;  
 }
 
 export interface CreateService<TTable extends PgTable> {

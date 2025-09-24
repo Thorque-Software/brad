@@ -5,8 +5,7 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
-        "dist",
-        "index.d.ts"
+        "dist"
     ],
     "scripts": {
         "build": "rm -rf dist/ && tsc",

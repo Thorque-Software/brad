@@ -41,7 +41,9 @@ export class ServiceBuilder<
     }
 
     findAll<S extends PgSelect>(select: S) {
-        return async (filters?: Filter<FSchema>, page: number = 1, pageSize: number = 10) => {
+        type Row = Awaited<ReturnType<S["execute"]>>[number];
+
+        return async (filters?: Filter<FSchema>, page: number = 1, pageSize: number = 10): Promise<Row[]> => {
             const offset = (page - 1) * pageSize;
 
             return await select

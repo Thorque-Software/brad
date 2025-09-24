@@ -17,7 +17,7 @@ export const providerService = {
     delete: providerBuilder.softDelete(),
     update: providerBuilder.update(),
     findAll: providerBuilder.findAll( // add pagination and filters
-        db.select().from(providerTable).$dynamic()
+        db.select({cuil: providerTable.email}).from(providerTable).$dynamic()
     ),
 }
 
@@ -59,5 +59,6 @@ export const serviceService = {
 }
 
 type c = typeof db.select().from(serviceTable);
+db.query.serviceTable.findFirst
 type a = Awaited<typeof serviceService.findOne>;
 type b = typeof serviceService.findAll;

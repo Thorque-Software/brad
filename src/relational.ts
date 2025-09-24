@@ -1,5 +1,5 @@
 import { Filter, FilterMap, PrimaryKeyData } from "../src/types";
-import { and, BuildQueryResult, DBQueryConfig, eq, isNull, SQL, TableRelationalConfig, TablesRelationalConfig } from "drizzle-orm";
+import { and, BuildQueryResult, DBQueryConfig, eq, isNull, KnownKeysOnly, SQL, TableRelationalConfig, TablesRelationalConfig } from "drizzle-orm";
 import { PgRelationalQuery, RelationalQueryBuilder } from "drizzle-orm/pg-core/query-builders/query";
 import { buildFilters } from "./filters";
 import { ZodObject } from "zod";
@@ -39,7 +39,9 @@ export function RelationalBuilder<
 
         findOne<
             TSelection extends Omit<DBQueryConfig<'many', true, TSchema, TFields>, 'limit'>
-        >(config?: DBQueryConfig<any, true, TSchema, TFields>) {
+        >(
+            config?: KnownKeysOnly<TSelection, Omit<DBQueryConfig<'many', true, TSchema, TFields>, 'limit'>>
+        ) {
             return async (id: number) => {
                 const result = await q.findFirst({
                     ...config,
