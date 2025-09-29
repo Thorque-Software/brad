@@ -1,44 +1,60 @@
 import { PgTable } from "drizzle-orm/pg-core";
 import { Request, Response } from "express";
 import { z, ZodObject } from "zod";
-import { CreateService, DeleteService, UpdateService, FindOneService, PaginationParams, RetrieverService, Filter } from "./types";
+import { PaginationParams, Filter } from "./types";
 import { InferInsertModel } from "drizzle-orm";
 
-export function findOneBuilder<TTable extends PgTable>(
-    service: FindOneService<TTable>,
-    hook?: (item: TTable["$inferSelect"]) => Response
+export function findOneBuilder<TReturn>(
+    service: {
+        findOne: (id: any) => Promise<TReturn>
+    },
+    hook?: (item: TReturn) => void
 ) {
     return async (req: Request, res: Response) => {
         const item = await service.findOne(req.params.id);
         if (hook !== undefined) {
-            return hook(item);
-        } else {
-            res.status(200).json(item);
+            hook(item);
         }
+        res.status(200).json(item);
     }
 }
 
-export function findAllBuilder<FSchema extends ZodObject, TTable extends PgTable>(
-    service: RetrieverService<FSchema, TTable>, 
+export function findAllBuilder<FSchema extends ZodObject, TReturn>(
+    service: {
+        findAll: (filters?: Filter<FSchema>, page?: number, pageSize?: number) => Promise<TReturn[]>;
+        count: (filters?: Filter<FSchema>) => Promise<number>
+    },
     filter: FSchema,
-    hook?: (items: TTable["$inferSelect"][], total: number) => Response
+    hook?: (items: TReturn[], total: number) => void,
+    hasPagination: boolean = true
 ) {
     return async (req: Request, res: Response) => {
         const filters = filter.parse({
             ...req.params,
             ...req.query
         });
-        const pagination = getPagination(req);
-        const [items, total] = await Promise.all([
-            service.findAll(filters, pagination.page, pagination.pageSize),
-            service.count(filters)
-        ]);
 
-        if (hook !== undefined) {
-            return hook(items, total);
+        let pagination, itemsProm;
+        if (hasPagination) {
+            pagination = getPagination(req);
+            itemsProm = service.findAll(filters, pagination.page, pagination.pageSize);
         } else {
+            itemsProm = service.findAll(filters);
+        }
+        const totalProm = service.count(filters)
+
+        const [items, total] = await Promise.all([itemsProm, totalProm]);
+
+        hook?.(items, total);
+
+        if (hasPagination) {
             return res.status(200).json({
                 pagination,
+                items,
+                total
+            });
+        } else {
+            return res.status(200).json({
                 items,
                 total
             });
@@ -46,9 +62,11 @@ export function findAllBuilder<FSchema extends ZodObject, TTable extends PgTable
     }
 }
 
-export function createBuilder<TTable extends PgTable, Schema extends ZodObject>(
-    service: CreateService<TTable>,
-    schema: Schema
+export function createBuilder<CSchema extends ZodObject, TReturn>(
+    service: {
+        create: (data: z.core.output<CSchema>) => Promise<TReturn> 
+    },
+    schema: CSchema
 ) {
     return validate(schema, async (req, res, data) => {
         const item = await service.create(data);
@@ -56,9 +74,11 @@ export function createBuilder<TTable extends PgTable, Schema extends ZodObject>(
     });
 }
 
-export function updateBuilder<TTable extends PgTable, Schema extends ZodObject>(
-    service: UpdateService<TTable>,
-    schema: Schema
+export function updateBuilder<USchema extends ZodObject, TReturn>(
+    service: {
+        update: (id: any, data: z.core.output<USchema>) => Promise<TReturn> 
+    },
+    schema: USchema
 ) {
     return validate(schema, async (req, res, data) => {
         const item = await service.update(req.params.id, data);
@@ -66,7 +86,11 @@ export function updateBuilder<TTable extends PgTable, Schema extends ZodObject>(
     });
 }
 
-export function deleteBuilder<TTable extends PgTable>(service: DeleteService<TTable>) {
+export function deleteBuilder(
+    service: {
+        delete: (id: any) => Promise<void> 
+    },
+) {
     return async (req: Request, res: Response) => {
         await service.delete(req.params.id);
         return res.status(204).send();
@@ -92,9 +116,10 @@ function getPagination(req: Request) {
     } as PaginationParams;
 }
 
+// -- OLD VERSION -- 
 interface CRUDService<FSchema extends ZodObject> {
     findOne: (id: any) => Promise<any>; 
-    findAll: (filters?: Filter<FSchema>, page?: number, pageSize?: number) => Promise<any>;
+    findAll: (filters?: Filter<FSchema>, page?: number, pageSize?: number) => Promise<any[]>;
     count:  (filters: Filter<FSchema>) => Promise<number>;
     create: (data: any) => Promise<any>;
     update: (id: any, data: Partial<any>) => Promise<any>;
@@ -117,7 +142,6 @@ export class BaseController<
         filter: FSchema    
     ) {
         this.service = service;
-
         // @ts-expect-error infer schema
         this.createSchema = base.omit({
             id: true,

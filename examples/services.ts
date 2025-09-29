@@ -3,6 +3,15 @@ import { ServiceBuilder, RelationalBuilder } from "bradb";
 import { providerTable, serviceTable } from "./schema"
 import { providerFilterMap, serviceFilterMap } from "./filter";
 
+db.transaction(async (tx) => {
+    // const builder = new ServiceBuilder(tx, serviceTable, serviceFilterMap);
+    // builder.count();
+
+    serviceService.create(data)
+    serviceService.update(tx, data)
+});
+
+
 // CRU
 // Retriever
 
@@ -57,8 +66,3 @@ export const serviceService = {
         }
     })
 }
-
-type c = typeof db.select().from(serviceTable);
-db.query.serviceTable.findFirst
-type a = Awaited<typeof serviceService.findOne>;
-type b = typeof serviceService.findAll;

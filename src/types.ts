@@ -8,7 +8,7 @@ export interface RetrieverService<FSchema extends ZodObject, TTable extends PgTa
 }
 
 export interface FindOneService<TTable extends PgTable> {
-    findOne: (id: any) => Promise<TTable["$inferSelect"]>;  
+    findOne: (id: any) => Promise<Partial<TTable>>;  
 }
 
 export interface CreateService<TTable extends PgTable> {

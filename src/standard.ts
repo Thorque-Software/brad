@@ -1,5 +1,5 @@
 import { Filter, FilterMap, PrimaryKeyType, Table } from "./types";
-import { PgSelect, PgTable } from "drizzle-orm/pg-core";
+import { PgSelect, PgTable, PgTransaction } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
     count as drizzleCount, 
@@ -40,19 +40,27 @@ export class ServiceBuilder<
         }
     }
 
-    findAll<S extends PgSelect>(select: S) {
+    findAll<S extends PgSelect>(select: S, paginated=true) {
         type Row = Awaited<ReturnType<S["execute"]>>[number];
 
-        return async (filters?: Filter<FSchema>, page: number = 1, pageSize: number = 10): Promise<Row[]> => {
-            const offset = (page - 1) * pageSize;
+        const base = (f: any) => select
+            .where(and(
+                isNull(this.table.deletedAt),
+                buildFilters(this.map, f)
+            ));
 
-            return await select
-                .where(and(
-                    isNull(this.table.deletedAt),
-                    buildFilters(this.map, filters)
-                ))
-                .limit(pageSize) 
-                .offset(offset)
+        if (paginated) {
+            return async (filters?: Filter<FSchema>, page: number = 1, pageSize: number = 10): Promise<Row[]> => {
+                const offset = (page - 1) * pageSize;
+
+                return await base(filters)
+                    .limit(pageSize) 
+                    .offset(offset)
+            }
+        } else {
+            return async (filters?: Filter<FSchema>): Promise<Row[]> => {
+                return await base(filters);
+            }
         }
     }
 
