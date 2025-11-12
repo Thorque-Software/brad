@@ -54,10 +54,10 @@ export class ServiceBuilder<
     findOne<S extends PgSelect>(select: S) {
         type Row = Awaited<ReturnType<S["execute"]>>[number];
 
-        return async (pkFilter: PrimaryKeyData<T>): Promise<Row> => {
-            const result = await select.where(this.findOneConditions(pkFilter));
+        return async (id: PrimaryKeyType<T>/* pkFilter: PrimaryKeyData<T> */): Promise<Row> => {
+            const result = await select.where(this.findOneConditions(id));
 
-            if (result.length == 0) throw notFoundWithId(this.tableName, pkFilter);
+            if (result.length == 0) throw notFoundWithId(this.tableName, {id: id});
 
             return result[0];
         }
