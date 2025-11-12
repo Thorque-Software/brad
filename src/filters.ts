@@ -1,6 +1,7 @@
-import { and, SQL } from "drizzle-orm";
-import { Filter, FilterMap } from "./types";
+import { and, eq, SQL } from "drizzle-orm";
+import { Filter, FilterMap, PrimaryKeyData } from "./types";
 import { ZodObject } from "zod";
+import { AnyPgTable, PgColumn } from "drizzle-orm/pg-core";
 
 export function buildFilters<FSchema extends ZodObject>(
     map: FilterMap<FSchema>,
@@ -21,4 +22,19 @@ export function buildFilters<FSchema extends ZodObject>(
     }
 
     return conditions.length ? and(...conditions) : undefined;
+}
+
+export function buildPKFilters<T extends AnyPgTable>(
+    pks: PgColumn[],
+    values: PrimaryKeyData<T>
+) {
+    if (pks.length === 0) {
+        throw new Error(`Table has no detectable primary keys`);
+    }
+
+    const conditions = pks.map(pk => 
+        eq(pk, values[pk.name as keyof typeof values])
+    );
+
+    return conditions.length === 1 ? conditions[0] : and(...conditions);
 }

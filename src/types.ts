@@ -1,5 +1,5 @@
 import { SQL } from "drizzle-orm";
-import { AnyPgTable, PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { AnyPgTable, PgColumn, PgTable, PgTransaction } from "drizzle-orm/pg-core";
 import z, { ZodObject } from "zod";
 
 export interface RetrieverService<FSchema extends ZodObject, TTable extends PgTable> {
@@ -8,19 +8,38 @@ export interface RetrieverService<FSchema extends ZodObject, TTable extends PgTa
 }
 
 export interface FindOneService<TTable extends PgTable> {
-    findOne: (id: any) => Promise<Partial<TTable>>;  
+    findOne: (id: PrimaryKeyType<TTable>) => Promise<Partial<TTable>>;  
 }
 
-export interface CreateService<TTable extends PgTable> {
-    create: (data: TTable["$inferInsert"]) => Promise<TTable["$inferSelect"]>;
+export interface CreateService<
+    TTable extends PgTable,
+    TSchema extends Record<string, unknown>
+> {
+    create: (
+        data: TTable["$inferInsert"],
+        tx?: PgTransaction<any, TSchema, any>
+    ) => Promise<TTable["$inferSelect"]>;
 }
 
-export interface UpdateService<TTable extends PgTable> {
-    update: (id: any, data: Partial<TTable["$inferInsert"]>) => Promise<TTable["$inferSelect"]>;
+export interface UpdateService<
+    TTable extends PgTable,
+    TSchema extends Record<string, unknown>
+> {
+    update: (
+        id: PrimaryKeyType<TTable>, 
+        data: Partial<TTable["$inferInsert"]>,
+        tx?: PgTransaction<any, TSchema, any>
+    ) => Promise<TTable["$inferSelect"]>;
 }
 
-export interface DeleteService<TTable extends PgTable> {
-    delete: (id: any) => Promise<TTable["$inferSelect"]>;
+export interface DeleteService<
+    TTable extends PgTable,
+    TSchema extends Record<string, unknown>
+> {
+    delete: (
+        id: PrimaryKeyType<TTable>,
+        tx?: PgTransaction<any, TSchema, any>
+    ) => Promise<void>;
 }
 
 export type PrimaryKeyData<TTable extends AnyPgTable> = {
@@ -37,8 +56,8 @@ export interface PaginationParams {
 }
 
 export type Table = AnyPgTable & {
-    id: PgColumn;
     deletedAt: PgColumn;
+    id: any;
 };
 
 export type PrimaryKeyType<T extends AnyPgTable> = T["_"]["columns"]["id"]["_"]["data"];

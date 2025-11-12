@@ -9,6 +9,6 @@
     "declaration": true,
     "outDir": "./dist"
   },
-  "include": ["src/**/*.ts", "index.ts"],
+  "include": ["src/**/*.ts", "index.ts", "bin/*.ts"],
   "exclude": ["node_modules"]
 }

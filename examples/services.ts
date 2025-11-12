@@ -1,24 +1,24 @@
 import { db } from "./db"
-import { ServiceBuilder, RelationalBuilder } from "bradb";
+import { ServiceBuilder, RelationalBuilder, PrimaryKeyData } from "bradb";
 import { providerTable, serviceTable } from "./schema"
 import { providerFilterMap, serviceFilterMap } from "./filter";
 
-db.transaction(async (tx) => {
-    // const builder = new ServiceBuilder(tx, serviceTable, serviceFilterMap);
-    // builder.count();
-
-    serviceService.create(data)
-    serviceService.update(tx, data)
-});
-
-
 // CRU
 // Retriever
-
 const builder = new ServiceBuilder(db, serviceTable, serviceFilterMap);
 const rb = RelationalBuilder(db.query.serviceTable, serviceFilterMap);
 
 const providerBuilder = new ServiceBuilder(db, providerTable, providerFilterMap);
+
+// const findAll = builder.query(
+//     db.select({cuil: providerTable.email}).from(providerTable).$dynamic(
+// )
+// .addFilters(filterSchema)
+// .addPagination()
+
+// const findOne = builder.query(
+//     db.select({cuil: providerTable.email}).from(providerTable).$dynamic(
+// ).findByPK()
 
 export const providerService = {
     create: providerBuilder.create(),
@@ -66,3 +66,7 @@ export const serviceService = {
         }
     })
 }
+
+type a = PrimaryKeyData<typeof serviceTable>;
+
+serviceService.update({id: 10}, {});

@@ -66,10 +66,15 @@ export function createBuilder<CSchema extends ZodObject, TReturn>(
     service: {
         create: (data: z.core.output<CSchema>) => Promise<TReturn> 
     },
-    schema: CSchema
+    schema: CSchema,
+    hook?: (req: Request, res: Response, data: z.core.output<CSchema>, item: TReturn) => Promise<object>
 ) {
     return validate(schema, async (req, res, data) => {
         const item = await service.create(data);
+        if (hook) {
+            const i = await hook(req, res, data, item);
+            return res.status(201).json(i);
+        }
         return res.status(201).json(item);
     });
 }
@@ -139,17 +144,19 @@ export class BaseController<
     constructor(
         service: CRUDService<FSchema>,
         base: z.ZodObject,
-        filter: FSchema    
+        filter: FSchema,
+        createSchema?: z.ZodSchema<InferInsertModel<T>>,
+        updateSchema?: Partial<InferInsertModel<T>>
     ) {
         this.service = service;
         // @ts-expect-error infer schema
-        this.createSchema = base.omit({
+        this.createSchema = createSchema || base.omit({
             id: true,
             deletedAt: true
         }) as z.ZodSchema<InferInsertModel<T>>;
 
         // @ts-expect-error infer schema
-        this.updateSchema = base.partial() as z.ZodSchema<
+        this.updateSchema = updateSchema || base.partial() as z.ZodSchema<
             Partial<InferInsertModel<T>>
         >;
         this.filterSchema = filter;

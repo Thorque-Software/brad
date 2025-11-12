@@ -4,6 +4,9 @@
     "description": "",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "bin": {
+        "brad": "dist/bin/brad.js"
+    },
     "files": [
         "dist"
     ],
