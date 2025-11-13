@@ -1,6 +1,6 @@
 {
     "name": "bradb",
-    "version": "2.0.1",
+    "version": "2.1.1",
     "description": "",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
