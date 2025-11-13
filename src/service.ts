@@ -8,7 +8,7 @@ import { and, eq,
     } from "drizzle-orm";
 import { buildFilters, buildPKFilters } from "./filters";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
-import { ZodObject } from "zod";
+import { ZodObject, ZodSchema } from "zod";
 
 export class ServiceBuilder<
     T extends Table,
@@ -94,42 +94,51 @@ export class ServiceBuilder<
         }
     }
 
-    create(pre?: (
-        data: any,
+    create<S extends any>(hook?: (
+        data: S extends Object ? S: InferInsertModel<T>,
         tx?: PgTransaction<any, TSchema, any>
     ) => Promise<InferInsertModel<T>>) {
         return async (
-            data: InferInsertModel<T>,
+            data: S extends Object ? S : InferInsertModel<T>,
             tx?: PgTransaction<any, TSchema, any>
         ) => {
-            if (pre) {
-                data = await pre(data);
+            // If pre exists data is going to be InferInsertModel<T>
+            let values = data as InferInsertModel<T>;
+            if (hook) {
+                values = await hook(data);
             }
 
             const executor = tx || this.db;
             const [result] = await executor
                 .insert(this.table)
-                .values(data)
+                .values(values)
                 .returning()
                 .catch(handleSqlError);
             return result as InferSelectModel<T>;
         }
     }
 
-    update() {
+    update<S extends any>(pre?: (
+        data: S extends Object ? S: InferInsertModel<T>,
+        tx?: PgTransaction<any, TSchema, any>
+    ) => Promise<InferInsertModel<T>>) {
         return async (
-            // pkFilter: PrimaryKeyData<T>,
             id: PrimaryKeyType<T>,
-            data: Partial<InferInsertModel<T>>,
+            data: S extends Object ? S : InferInsertModel<T>,
             tx?: PgTransaction<any, TSchema, any>
         ) => {
+            let values = data as InferInsertModel<T>;
+            if (pre) {
+                values = await pre(data);
+            }
+
             if (Object.keys(data).length == 0) {
                 throw new BadRequest("update needs at least one field");
             }
             const executor = tx || this.db;
             const [result] = await executor
                 .update(this.table)
-                .set(data)
+                .set(values)
                 .where(this.findOneConditions(id))
                 .returning()
                 .catch(handleSqlError) as InferSelectModel<T>[];
@@ -205,6 +214,9 @@ function getPKs(table: Table) {
 }
 
 function notFoundWithId(tableName: string, pkFilter: object) {
+    // for (const [key, val] of pkFilter.values()) {
+    //
+    // }
     // TODO: proper message
     return new NotFound(`${tableName} not found`);
 }
