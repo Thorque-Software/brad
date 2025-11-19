@@ -119,12 +119,12 @@ export class ServiceBuilder<
     }
 
     update<S extends any>(pre?: (
-        data: S extends Object ? S: InferInsertModel<T>,
+        data: S extends Object ? S: Partial<InferInsertModel<T>>,
         tx?: PgTransaction<any, TSchema, any>
     ) => Promise<InferInsertModel<T>>) {
         return async (
             id: PrimaryKeyType<T>,
-            data: S extends Object ? S : InferInsertModel<T>,
+            data: S extends Object ? S : Partial<InferInsertModel<T>>,
             tx?: PgTransaction<any, TSchema, any>
         ) => {
             let values = data as InferInsertModel<T>;
