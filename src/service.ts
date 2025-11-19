@@ -1,4 +1,4 @@
-import { DeleteService, Filter, FilterMap, PrimaryKeyData, PrimaryKeyType, Table } from "./types";
+import { Filter, FilterMap, PrimaryKeyType, Table } from "./types";
 import { getTableConfig, PgColumn, PgSelect, PgTable, PgTransaction } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
@@ -6,9 +6,9 @@ import { and, eq,
     getTableName, InferInsertModel, InferSelectModel, isNull,
     SQL,
     } from "drizzle-orm";
-import { buildFilters, buildPKFilters } from "./filters";
+import { buildFilters } from "./filters";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
-import { ZodObject, ZodSchema } from "zod";
+import { ZodObject } from "zod";
 
 export class ServiceBuilder<
     T extends Table,

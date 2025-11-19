@@ -8,12 +8,13 @@ export function findOneBuilder<TReturn>(
     service: {
         findOne: (id: any) => Promise<TReturn>
     },
-    hook?: (item: TReturn) => void
+    hook?: (item: TReturn) => Promise<object>
 ) {
     return async (req: Request, res: Response) => {
         const item = await service.findOne(req.params.id);
         if (hook !== undefined) {
-            hook(item);
+            const i = await hook(item);
+            return res.status(200).json(i);
         }
         res.status(200).json(item);
     }
@@ -25,7 +26,7 @@ export function findAllBuilder<FSchema extends ZodObject, TReturn>(
         count: (filters?: Filter<FSchema>) => Promise<number>
     },
     filter: FSchema,
-    hook?: (items: TReturn[], total: number) => void,
+    hook?: (items: TReturn[], total: number) => Promise<object[]>,
     hasPagination: boolean = true
 ) {
     return async (req: Request, res: Response) => {
@@ -45,17 +46,21 @@ export function findAllBuilder<FSchema extends ZodObject, TReturn>(
 
         const [items, total] = await Promise.all([itemsProm, totalProm]);
 
-        hook?.(items, total);
+        let resItems: object[] = items as object[];
+
+        if (hook != undefined) {
+            resItems = await hook(items, total);
+        }
 
         if (hasPagination) {
             return res.status(200).json({
                 pagination,
-                items,
+                items: resItems,
                 total
             });
         } else {
             return res.status(200).json({
-                items,
+                items: resItems,
                 total
             });
         }
