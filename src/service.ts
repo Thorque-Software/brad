@@ -1,28 +1,29 @@
-import { Filter, FilterMap, PrimaryKeyType, Table } from "./types";
-import { getTableConfig, PgColumn, PgSelect, PgTable, PgTransaction } from "drizzle-orm/pg-core";
+import { Filter, FilterMap, PrimaryKeyData, PrimaryKeyType, Table } from "./types";
+import { AnyPgTable, getTableConfig, PgColumn, PgSelect, PgTable, PgTransaction } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { and, eq, 
     count as drizzleCount, 
     getTableName, InferInsertModel, InferSelectModel, isNull,
     SQL,
     } from "drizzle-orm";
-import { buildFilters } from "./filters";
+import { buildFilters, buildPKFilters } from "./filters";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
 import { ZodObject } from "zod";
 
 export class ServiceBuilder<
-    T extends Table,
+    T extends AnyPgTable,
     TSchema extends Record<string, unknown>,
     FSchema extends ZodObject,
+    PKType extends object = PrimaryKeyData<T>
 >{
     private readonly db: NodePgDatabase<TSchema>;
     private readonly table: T;
     private readonly map: FilterMap<FSchema>
-    private readonly pks: PgColumn[];
+    readonly pks: PgColumn[];
     readonly haveSoftDelete: boolean;
 
     readonly findAllConditions: (f?: Filter<FSchema>) => SQL | undefined;
-    readonly findOneConditions: (id: PrimaryKeyType<T>/* pkFilter: PrimaryKeyData<T> */) => SQL | undefined;
+    readonly findOneConditions: (pkFilter: PKType) => SQL | undefined;
 
     readonly tableName: string;
 
@@ -40,25 +41,36 @@ export class ServiceBuilder<
                 buildFilters(this.map, f)
             );
 
-            this.findOneConditions = (id: PrimaryKeyType<T>/* pkFilter: PrimaryKeyData<T> */) => and(
+            this.findOneConditions = (pkFilter: PKType) => and(
                 isNull(this.table.deletedAt),
-                // buildPKFilters(this.pks, pkFilter)
-                eq(this.table.id, id)
+                buildPKFilters(this.pks, pkFilter)
             );
         } else {
             this.findAllConditions = (f?: Filter<FSchema>) => buildFilters(this.map, f);
-            this.findOneConditions = (id: PrimaryKeyType<T>, /* pkFilter: PrimaryKeyData<T> */) => eq(this.table.id, id) // buildPKFilters(this.pks, id);
+            this.findOneConditions = (pkFilter: PKType) => buildPKFilters(this.pks, pkFilter);
         }
     }
 
     findOne<S extends PgSelect>(select: S) {
         type Row = Awaited<ReturnType<S["execute"]>>[number];
 
-        return async (id: PrimaryKeyType<T>/* pkFilter: PrimaryKeyData<T> */): Promise<Row> => {
-            const result = await select.where(this.findOneConditions(id));
+        return async (pk: PKType[[keyof PKType][0]]): Promise<Row> => {
+            const pkValues = {
+                [this.pks[0].name]: pk
+            } as PKType;
 
-            if (result.length == 0) throw notFoundWithId(this.tableName, {id: id});
+            const result = await select.where(this.findOneConditions(pkValues));
+            if (result.length == 0) throw notFoundWithId(this.tableName, pkValues);
+            return result[0];
+        }
+    }
 
+    findByPk<S extends PgSelect>(select: S) {
+        type Row = Awaited<ReturnType<S["execute"]>>[number];
+
+        return async (pkValues: PKType): Promise<Row> => {
+            const result = await select.where(this.findOneConditions(pkValues));
+            if (result.length == 0) throw notFoundWithId(this.tableName, pkValues);
             return result[0];
         }
     }
@@ -165,7 +177,7 @@ export class ServiceBuilder<
         ) => {
             const executor = tx || this.db;
             const { rowCount } = await executor
-                .update(this.table as Table)
+                .update(this.table)
                 .set({ deletedAt: new Date() })
                 .where(this.findOneConditions(id))
             if (rowCount == 0) {
@@ -176,7 +188,6 @@ export class ServiceBuilder<
 
     hardDelete() {
         return async (
-            // id: PrimaryKeyData<T>,
             id: PrimaryKeyType<T>,
             tx?: PgTransaction<any, TSchema, any>
         ) => {
@@ -191,7 +202,7 @@ export class ServiceBuilder<
     }
 }
 
-function haveSoftDelete(table: Table, columnName="deleted_at") {
+function haveSoftDelete(table: AnyPgTable, columnName="deleted_at") {
     const { columns } = getTableConfig(table);
     for (const col of columns) {
         if (col.name == columnName) {
@@ -201,7 +212,7 @@ function haveSoftDelete(table: Table, columnName="deleted_at") {
     return false;
 }
 
-function getPKs(table: Table) {
+function getPKs(table: AnyPgTable) {
     const pks = [];
     const { columns } = getTableConfig(table);
     for (const col of columns) {
@@ -214,9 +225,6 @@ function getPKs(table: Table) {
 }
 
 function notFoundWithId(tableName: string, pkFilter: object) {
-    // for (const [key, val] of pkFilter.values()) {
-    //
-    // }
-    // TODO: proper message
-    return new NotFound(`${tableName} not found`);
+    const message = Object.entries(pkFilter).map(([k, v]) => `${k}=${v}`).join(' and ');
+    return new NotFound(`${tableName} with ${message} not found`);
 }

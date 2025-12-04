@@ -12,7 +12,8 @@
     ],
     "scripts": {
         "build": "rm -rf dist/ && tsc",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "vitest",
+        "test:tsd": "tsd --project tests/types/tsconfig.json"
     },
     "keywords": [
         "api",
@@ -24,7 +25,11 @@
     "devDependencies": {
         "@types/express": "^5.0.3",
         "@types/pg": "^8.15.5",
-        "typescript": "^5.9.2"
+        "drizzle-kit": "^0.31.7",
+        "ts-node": "^10.9.2",
+        "tsd": "^0.33.0",
+        "typescript": "^5.9.2",
+        "vitest": "^3.2.4"
     },
     "peerDependencies": {
         "@types/pg": "^8.15.5",

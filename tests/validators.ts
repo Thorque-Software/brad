@@ -16,7 +16,7 @@ export const serviceSchema = z.object({
 export const providerSchema = z.object({
     id: z.number(),
     fullname: z.string(),
-    email: z.email(),
+    email: z.string().email(),
     phoneNumber: z.string().optional(),
     cuil: z.string(),
     cityId: z.number(),

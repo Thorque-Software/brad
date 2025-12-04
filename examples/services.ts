@@ -2,6 +2,34 @@ import { db } from "./db"
 import { ServiceBuilder, RelationalBuilder, PrimaryKeyData } from "bradb";
 import { providerTable, serviceTable } from "./schema"
 import { providerFilterMap, serviceFilterMap } from "./filter";
+import { AnyPgTable } from "drizzle-orm/pg-core";
+
+type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+type LengthOfKeys<T> = 
+    keyof T extends infer K ? (K extends string | number | symbol ? K[] : never) : never extends infer KeysArray ? KeysArray["length"] : never;
+
+type pks = {fileId: string, userId: string};
+type b = Prettify<[keyof pks]>;
+type IsUnion<T> = [T] extends [never] ? false : T extends any ? ([T] extends [infer U] ? (U extends any ? false : true) : false) : false;
+
+type pklen = keyof pks extends [any] ? true : false;
+
+type a = IsUnion<keyof pks>;
+type list = [1];
+type c = list["length"] extends 1 ? true : false;  
+
+type ExtractPKs<TTable extends AnyPgTable> = {
+    [K in keyof TTable["_"]["columns"]
+        as TTable["_"]["columns"][K] extends { _: { isPrimaryKey: true } }
+            ? K
+            : never
+    ]: TTable["_"]["columns"][K];
+}[keyof TTable["_"]["columns"]];
+
+type aaa = ExtractPKs<typeof serviceTable>;
+
 
 // CRU
 // Retriever
@@ -66,7 +94,3 @@ export const serviceService = {
         }
     })
 }
-
-type a = PrimaryKeyData<typeof serviceTable>;
-
-serviceService.update({id: 10}, {});
