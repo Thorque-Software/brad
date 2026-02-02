@@ -1,10 +1,11 @@
 import { Filter, FilterMap, PrimaryKeyData, PrimaryKeyType, Table } from "./types";
 import { AnyPgTable, getTableConfig, PgColumn, PgSelect, PgTable, PgTransaction } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { and, eq, 
+import { 
+    and, 
     count as drizzleCount, 
     getTableName, InferInsertModel, InferSelectModel, isNull,
-    SQL,
+    SQL
     } from "drizzle-orm";
 import { buildFilters, buildPKFilters } from "./filters";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
@@ -37,12 +38,12 @@ export class ServiceBuilder<
         this.haveSoftDelete = haveSoftDelete(table);
         if (this.haveSoftDelete) {
             this.findAllConditions = (f?: Filter<FSchema>) => and(
-                isNull(this.table.deletedAt),
+                isNull((this.table as any).deletedAt),
                 buildFilters(this.map, f)
             );
 
             this.findOneConditions = (pkFilter: PKType) => and(
-                isNull(this.table.deletedAt),
+                isNull((this.table as any).deletedAt),
                 buildPKFilters(this.pks, pkFilter)
             );
         } else {
@@ -52,20 +53,6 @@ export class ServiceBuilder<
     }
 
     findOne<S extends PgSelect>(select: S) {
-        type Row = Awaited<ReturnType<S["execute"]>>[number];
-
-        return async (pk: PKType[[keyof PKType][0]]): Promise<Row> => {
-            const pkValues = {
-                [this.pks[0].name]: pk
-            } as PKType;
-
-            const result = await select.where(this.findOneConditions(pkValues));
-            if (result.length == 0) throw notFoundWithId(this.tableName, pkValues);
-            return result[0];
-        }
-    }
-
-    findByPk<S extends PgSelect>(select: S) {
         type Row = Awaited<ReturnType<S["execute"]>>[number];
 
         return async (pkValues: PKType): Promise<Row> => {
@@ -135,7 +122,7 @@ export class ServiceBuilder<
         tx?: PgTransaction<any, TSchema, any>
     ) => Promise<InferInsertModel<T>>) {
         return async (
-            id: PrimaryKeyType<T>,
+            pks: PKType,
             data: S extends Object ? S : Partial<InferInsertModel<T>>,
             tx?: PgTransaction<any, TSchema, any>
         ) => {
@@ -151,12 +138,12 @@ export class ServiceBuilder<
             const [result] = await executor
                 .update(this.table)
                 .set(values)
-                .where(this.findOneConditions(id))
+                .where(this.findOneConditions(pks))
                 .returning()
                 .catch(handleSqlError) as InferSelectModel<T>[];
 
             if (!result) {
-                throw notFoundWithId(this.tableName, {id: id});
+                throw notFoundWithId(this.tableName, pks);
             }
             return result;
         }
@@ -172,31 +159,31 @@ export class ServiceBuilder<
 
     softDelete() {
         return async (
-            id: PrimaryKeyType<T>,
+            pks: PKType,
             tx?: PgTransaction<any, TSchema, any>
         ) => {
             const executor = tx || this.db;
             const { rowCount } = await executor
-                .update(this.table)
+                .update(this.table as any)
                 .set({ deletedAt: new Date() })
-                .where(this.findOneConditions(id))
+                .where(this.findOneConditions(pks))
             if (rowCount == 0) {
-                throw notFoundWithId(this.tableName, {id: id});
+                throw notFoundWithId(this.tableName, pks);
             }
         }
     }
 
     hardDelete() {
         return async (
-            id: PrimaryKeyType<T>,
+            pks: PKType,
             tx?: PgTransaction<any, TSchema, any>
         ) => {
             const executor = tx || this.db;
             const { rowCount } = await executor
                 .delete(this.table)
-                .where(this.findOneConditions(id))
+                .where(this.findOneConditions(pks))
             if (rowCount == 0) {
-                throw notFoundWithId(this.tableName, {id: id});
+                throw notFoundWithId(this.tableName, pks);
             }
         }
     }

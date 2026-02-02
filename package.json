@@ -5,7 +5,7 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {
-        "brad": "dist/bin/brad.js"
+        "brad": "dist/src/commands.js"
     },
     "files": [
         "dist"
@@ -13,7 +13,8 @@
     "scripts": {
         "build": "rm -rf dist/ && tsc",
         "test": "vitest",
-        "test:tsd": "tsd --project tests/types/tsconfig.json"
+        "yalc:publish": "npm run build && npx yalc publish",
+        "yalc:push": "npm run build && chmod +x dist/src/commands.js && npx yalc push"
     },
     "keywords": [
         "api",
@@ -26,6 +27,7 @@
         "@types/express": "^5.0.3",
         "@types/pg": "^8.15.5",
         "drizzle-kit": "^0.31.7",
+        "drizzle-zod": "^0.8.3",
         "ts-node": "^10.9.2",
         "tsd": "^0.33.0",
         "typescript": "^5.9.2",
@@ -37,5 +39,8 @@
         "express": "^5.1.0",
         "pg": "^8.16.3",
         "zod": "^4.1.5"
+    },
+    "dependencies": {
+        "commander": "^14.0.3"
     }
 }
