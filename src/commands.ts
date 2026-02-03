@@ -75,6 +75,7 @@ function error(msg: string) {
 }
 
 function isDrizzleTable(obj: unknown) {
+    console.log("obj", typeof obj === 'object', obj instanceof PgTable);
     return obj && 
         typeof obj === 'object' && 
         obj instanceof PgTable
@@ -114,12 +115,12 @@ program
     .action(async (name: string, node: Node, options) => {
         const cfg = loadConfig(options.dir);
         
-        // Check all of required external dependencies on the project
-        checkExternalDep(cfg, [
-            "drizzle-zod",
-            "express",
-            "bradb"
-        ]);
+        // // Check all of required external dependencies on the project
+        // checkExternalDep(cfg, [
+        //     "drizzle-zod",
+        //     "express",
+        //     "bradb"
+        // ]);
 
         require('ts-node/register');
 
