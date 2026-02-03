@@ -1,0 +1,21 @@
+{
+  "name": "bradb-test-project",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "test"
+  ],
+  "license": "ISC",
+  "author": "Lautaro Teta Musa",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+      "start": "npm run build && node dist/index.js",
+      "build": "rm -rf dist/ && tsc",
+      "brad": "node ../dist/src/commands.js",
+      "clean": "rm -rf node_modules/ package-lock.json && npm install"
+  },
+  "dependencies": {
+      "bradb": "file:../dist"
+  }
+}
