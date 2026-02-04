@@ -55,6 +55,10 @@ program
         //
 
         const root = buildRoot(name, type);
+        // Aca tendríamos que ir desde (name, type) hasta la raiz (name, "router")
+        // y desde ahi, ver si tenemos dependencias de otra entidad
+        root.adj.push(buildRoot("event", "router"));
+        root.adj.push(buildRoot("student", "router"));
         console.log(JSON.stringify(root, null, 4));
         build(cfg, root);
     });
@@ -72,6 +76,8 @@ program
         const cfg = loadConfig();
 
         const root = buildRoot(name, type);
+        root.adj.push(buildRoot("event", "router"));
+        root.adj.push(buildRoot("student", "router"));
         destroy(cfg, root);
     })
 //

@@ -4,3 +4,8 @@ yalc.lock
 yarn.lock
 dist/
 package-lock.json
+
+src/routes/*
+src/controllers/*
+src/validators/*
+src/services/*
