@@ -5,12 +5,12 @@ import {
     varchar
 } from "drizzle-orm/pg-core";
 
-export const eventTable = pgTable("course", {
+export const eventTable = pgTable("event", {
     id: serial().primaryKey().notNull(),
-    year: varchar("year", { length: 4 }),
-    minCapacity: integer("min_capacity"),
-    maxCapacity: integer("max_capacity"),
-    cod: varchar("cod", { length: 255 }),
-    duration: integer("duration"),
-    dayOfWeek: integer("day_of_week"),
+    year: varchar("year", { length: 4 }).notNull(),
+    minCapacity: integer("min_capacity").notNull(),
+    maxCapacity: integer("max_capacity").notNull(),
+    cod: varchar("cod", { length: 255 }).notNull(),
+    duration: integer("duration").notNull(),
+    dayOfWeek: integer("day_of_week").notNull(),
 });

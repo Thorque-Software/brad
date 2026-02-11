@@ -2,6 +2,14 @@ import { and, eq, SQL } from "drizzle-orm";
 import { Filter, FilterMap, PrimaryKeyData } from "./types";
 import { ZodObject } from "zod";
 import { AnyPgTable, PgColumn } from "drizzle-orm/pg-core";
+import { createSchemaFactory } from "drizzle-zod";
+
+const { createInsertSchema } = createSchemaFactory({
+    coerce: {
+        number: true,
+    },
+});
+export const createFilterSchema = createInsertSchema;
 
 export function buildFilters<FSchema extends ZodObject>(
     map: FilterMap<FSchema>,

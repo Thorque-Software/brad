@@ -9,3 +9,4 @@ src/routes/*
 src/controllers/*
 src/validators/*
 src/services/*
+src/filters/*

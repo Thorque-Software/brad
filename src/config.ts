@@ -10,6 +10,7 @@ const ConfigSchema = z.object({
     serviceDir: z.string().default("src/services"),
     controllerDir: z.string().default("src/controllers"),
     routerDir: z.string().default("src/routes"),
+    filterDir: z.string().default("src/filters"),
 
     cwd: z.string().default(process.cwd()),
     maxColumns: z.number().default(80)

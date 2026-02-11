@@ -10,12 +10,19 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-      "start": "npm run build && node dist/index.js",
-      "build": "rm -rf dist/ && tsc",
-      "brad": "node ../dist/src/commands.js",
-      "clean": "rm -rf node_modules/ package-lock.json && npm install"
+    "start": "npm run build && node dist/index.js",
+    "build": "rm -rf dist/ && tsc",
+    "brad": "node ../dist/src/commands.js",
+    "clean": "rm -rf node_modules/ package-lock.json && npm install",
+    "test": "vitest"
   },
   "dependencies": {
-      "bradb": "file:../dist"
+    "bradb": "file:../dist",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.8",
+    "supertest": "^7.2.2",
+    "vitest": "^3.2.4"
   }
 }

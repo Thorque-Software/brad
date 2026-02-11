@@ -10,6 +10,7 @@ import {
 import { buildFilters, buildPKFilters } from "./filters";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
 import { ZodObject } from "zod";
+import { getPKs } from "./pg";
 
 export class ServiceBuilder<
     T extends AnyPgTable,
@@ -197,18 +198,6 @@ function haveSoftDelete(table: AnyPgTable, columnName="deleted_at") {
         }
     }
     return false;
-}
-
-function getPKs(table: AnyPgTable) {
-    const pks = [];
-    const { columns } = getTableConfig(table);
-    for (const col of columns) {
-        if (col.primary) {
-            pks.push(col);
-        }
-    }
-    if(pks.length <= 0) throw new Error("Service builder needs at least one primary key field");
-    return pks;
 }
 
 function notFoundWithId(tableName: string, pkFilter: object) {
