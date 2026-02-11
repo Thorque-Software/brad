@@ -13,7 +13,8 @@ const ConfigSchema = z.object({
     filterDir: z.string().default("src/filters"),
 
     cwd: z.string().default(process.cwd()),
-    maxColumns: z.number().default(80)
+    maxColumns: z.number().default(80),
+    override: z.coerce.boolean().default(false)
 });
 
 export type BradConfig = z.infer<typeof ConfigSchema>;

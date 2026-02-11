@@ -26,3 +26,9 @@ export function getPKs(table: PgTable) {
 
     return pks;
 }
+
+function isDrizzleTable(obj: unknown) {
+    return obj && 
+        typeof obj === 'object' && 
+        obj instanceof PgTable
+}

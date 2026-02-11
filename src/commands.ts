@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 
 import { Command, Argument } from "commander"
-import { PgTable } from 'drizzle-orm/pg-core';
 import { build, destroy, buildGraph, nodeTypes, NodeType } from './builder';
 import { loadConfig } from './config';
-
-function isDrizzleTable(obj: unknown) {
-    return obj && 
-        typeof obj === 'object' && 
-        obj instanceof PgTable
-}
 
 const program = new Command();
 program.name("brad").description("BRAD - Generator");
@@ -22,9 +15,11 @@ program
             .choices(nodeTypes)
             .default("router")
     )
+    .option('-o, --override', 'Generator will override the current code', false) 
     .description("generate entity recursively")
-    .action(async (name: string, type: NodeType) => {
+    .action(async (name: string, type: NodeType, options) => {
         const cfg = loadConfig();
+        cfg.override = options.override || false; 
 
         require('ts-node/register');
 
@@ -33,10 +28,6 @@ program
         // y desde ahi, ver si tenemos dependencias de otra entidad
         console.log(JSON.stringify(root, null, 4));
         build(root);
-        // const table = mods[`${root.name}Table`];
-        //
-        // const { foreignKeys, columns } = getTableConfig(table);
-        // console.log(foreignKeys, columns);
     });
 
 program

@@ -76,13 +76,20 @@ export function buildGraph(cfg: BradConfig, name: string, type: NodeType): Node 
 
     if (!checked[id(n)]) {
         checked[id(n)] = true;
+
         try {
             const mod = checkNode(n);
             mods = { ...mods, ...mod };
             valid[id(n)] = true;
         } catch(err: any) {
-            console.error(err.message);
-            valid[id(n)] = false;
+            // If config is set to override = true we not check the modules and re-write anywise
+            if (!cfg.override) {
+                valid[id(n)] = true;
+            } else {
+                console.error(err.message);
+                // it's not necessary to set it to false
+                valid[id(n)] = false;
+            }
         }
     }
 

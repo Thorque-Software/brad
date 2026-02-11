@@ -39,7 +39,7 @@ ${imports.join('\n')};
 const select = createSelectSchema(${name}Table);
 const insert = createInsertSchema(${name}Table);
 const update = insert.partial();
-const filter = createFilterSchema(eventTable).partial();
+const filter = createFilterSchema(${name}Table).partial();
 const pk = select.pick({
     ${zodPkPicker}
 });
