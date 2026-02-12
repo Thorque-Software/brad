@@ -57,7 +57,7 @@ type Export = Record<string, any>;
 
 const visited: Record<string, boolean> = {};
 const checked: Record<string, boolean> = {};
-const valid: Record<string, boolean> = {};
+export const valid: Record<string, boolean> = {};
 
 export let mods: Export = {};
 
@@ -78,18 +78,20 @@ export function buildGraph(cfg: BradConfig, name: string, type: NodeType): Node 
         checked[id(n)] = true;
 
         try {
-            const mod = checkNode(n);
-            mods = { ...mods, ...mod };
-            valid[id(n)] = true;
-        } catch(err: any) {
             // If config is set to override = true we not check the modules and re-write anywise
-            if (!cfg.override) {
-                valid[id(n)] = true;
-            } else {
-                console.error(err.message);
-                // it's not necessary to set it to false
+            if (cfg.override) {
                 valid[id(n)] = false;
+            } else {
+                const mod = checkNode(n);
+                mods = { ...mods, ...mod };
+                valid[id(n)] = true;
             }
+        } catch(err: any) {
+            console.error(err.message);
+            console.log(cfg.override);
+
+            // it's not necessary to set it to false
+            valid[id(n)] = false;
         }
     }
 
@@ -167,16 +169,12 @@ export function destroy(root: Node) {
 function checkNode(root: Node): Export {
     console.log(`Checking ${root.name}.${root.type}...`);
 
-    let module: Export = {};
-    try {
-        module = require(root.path);
-    } catch {
-        throw new Error(`[Missing file]: ${root.path}`);
-    }
+    // throw the require error
+    const module = require(root.path);
 
     for (const exp of root.exports) {
         if (!module[exp]) {
-            throw new Error(`[Missing export]: Cannot import ${exp} from ${path}`);
+            throw new Error(`[Missing export]: Cannot import ${exp} from ${root.path}`);
         }
     }
 

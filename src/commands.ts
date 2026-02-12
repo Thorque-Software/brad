@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command, Argument } from "commander"
-import { build, destroy, buildGraph, nodeTypes, NodeType } from './builder';
+import { build, destroy, buildGraph, nodeTypes, NodeType, valid } from './builder';
 import { loadConfig } from './config';
 
 const program = new Command();
@@ -27,6 +27,7 @@ program
         // Aca tendríamos que ir desde (name, type) hasta la raiz (name, "router")
         // y desde ahi, ver si tenemos dependencias de otra entidad
         console.log(JSON.stringify(root, null, 4));
+        console.log(valid);
         build(root);
     });
 
