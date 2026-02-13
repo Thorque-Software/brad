@@ -10,7 +10,7 @@ export const eventTable = pgTable("event", {
     year: varchar("year", { length: 4 }).notNull(),
     minCapacity: integer("min_capacity").notNull(),
     maxCapacity: integer("max_capacity").notNull(),
-    cod: varchar("cod", { length: 255 }).notNull(),
+    cod: varchar("cod", { length: 255 }).notNull().unique(),
     duration: integer("duration").notNull(),
     dayOfWeek: integer("day_of_week").notNull(),
 });

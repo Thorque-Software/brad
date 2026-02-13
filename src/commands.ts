@@ -27,7 +27,6 @@ program
         // Aca tendríamos que ir desde (name, type) hasta la raiz (name, "router")
         // y desde ahi, ver si tenemos dependencias de otra entidad
         console.log(JSON.stringify(root, null, 4));
-        console.log(valid);
         build(root);
     });
 

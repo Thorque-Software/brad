@@ -19,6 +19,8 @@ type Node = {
     exports: string[];
 };
 
+type CRUDOp = "getAll" | "getOne" | "create" | "update";
+
 type GeneratorFunc = (name: string, table: PgTable, imports: string[]) => string;
 
 // Default and base dependecies for each node type
@@ -31,6 +33,13 @@ const dependOn: Record<NodeType, NodeType[]> = {
     schema: [],
     db: []
 };
+
+/* CRUD Operations
+* # READ
+* router.getAll -> controller.getAll -> service.getAll -> schema
+*                  controller.count -> service.count -> schema 
+* controller
+*/
 
 // Default and base exports for each node type
 const requiredExports: Record<NodeType, (name: string) => string[]> = {
@@ -87,9 +96,6 @@ export function buildGraph(cfg: BradConfig, name: string, type: NodeType): Node 
                 valid[id(n)] = true;
             }
         } catch(err: any) {
-            console.error(err.message);
-            console.log(cfg.override);
-
             // it's not necessary to set it to false
             valid[id(n)] = false;
         }
@@ -171,6 +177,10 @@ function checkNode(root: Node): Export {
 
     // throw the require error
     const module = require(root.path);
+    // const code = fs.readFileSync(root.path).toString();
+    //
+    // const a = addCrudOp(`${root.name}${requiredExports[root.type]}`, code, "getAll");
+    // console.log(a);
 
     for (const exp of root.exports) {
         if (!module[exp]) {
@@ -179,6 +189,15 @@ function checkNode(root: Node): Export {
     }
 
     return module;
+}
+
+function addCrudOp(name: string, code: string, op: CRUDOp) {
+    const regex = new RegExp(`(export\s+const\s+${name}\s*=\s*\{)([\s\S]*?)\};`);
+    const match = code.match(regex);
+    if (!match) {
+        return code;
+    }
+    return match.toString();
 }
 
 function buildImportLine(from: Node, to: Node, maxColumns = 80) {

@@ -50,11 +50,17 @@ export const errorHandler = (
     next: NextFunction
 ) => {
     if (err instanceof ServiceError) {
-        return res.status(err.statusCode).json({ message: err.message });
+        return res.status(err.statusCode).json({ 
+            success: false,
+            code: err.statusCode,
+            message: err.message 
+        });
     }
 
     if (err instanceof ZodError) {
         return res.status(400).json({
+            success: false,
+            code: 400,
             message: "Validation failed",
             errors: err.issues
         });
@@ -68,7 +74,7 @@ export const errorHandler = (
 // infiera bien los tipos
 export function handleSqlError(e: unknown): never {
     let err = e;
-    if (e instanceof DrizzleQueryError && e.cause) {
+    if (instanceOf(e) && e.cause) {
         const cause = e.cause;
 
         if (/duplicate key/i.test(cause.message)) {
@@ -87,6 +93,15 @@ export function handleSqlError(e: unknown): never {
     }
 
     throw err;
+}
+
+// Safer version of instanceof that works on vitest too
+function instanceOf(err: unknown): err is DrizzleQueryError {
+    return typeof err === 'object' &&
+        err !== null &&
+        'constructor' in err &&
+        'name' in err.constructor &&
+        err.constructor.name === "DrizzleQueryError"
 }
 
 function isPgErrorWithDetail(err: unknown): err is Error & { detail: string } {

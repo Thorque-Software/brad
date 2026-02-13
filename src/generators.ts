@@ -1,11 +1,18 @@
-import { getTableConfig, PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { getPKs } from "./pg";
+import { getTableColumns } from "drizzle-orm";
 
 export function generateRouter(name: string, table: PgTable, imports: string[]) {
     const pkColumns = getPKs(table);
-    const route = pkColumns.map(pk => 
-       `${getRelationName(pk.name)}/:${pk.name}`
-    ).join("/")
+
+    let route = '';
+    if (pkColumns.length == 1) {
+        route = `:${pkColumns[0].name}`;
+    } else {
+        route = pkColumns.map(pk => 
+           `${getRelationName(pk.name)}/:${pk.name}`
+        ).join("/");
+    }
 
     return `import { Router } from "express";
 ${imports.join('\n')};
@@ -18,13 +25,13 @@ ${name}Router.get("/", ${name}Controller.getAll);
 ${name}Router.post("/", ${name}Controller.create);
 
 // Get one
-${name}Router.get("${route}", ${name}Controller.getOne);
+${name}Router.get("/${route}", ${name}Controller.getOne);
 
 // Update
-${name}Router.put("${route}", ${name}Controller.update);
+${name}Router.put("/${route}", ${name}Controller.update);
 
 // Delete
-${name}Router.delete("${route}", ${name}Controller.remove);`;
+${name}Router.delete("/${route}", ${name}Controller.remove);`;
 }
 
 export function generateValidator(name: string, table: PgTable, imports: string[]) {
@@ -32,7 +39,7 @@ export function generateValidator(name: string, table: PgTable, imports: string[
     const zodPkPicker = buildZodPkPicker(pkColumns);
 
     return `import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { createFilterSchema } from "bradb";
+import { createFilterSchema, createPkSchema } from "bradb";
 import { z } from "zod";
 ${imports.join('\n')};
 
@@ -40,7 +47,7 @@ const select = createSelectSchema(${name}Table);
 const insert = createInsertSchema(${name}Table);
 const update = insert.partial();
 const filter = createFilterSchema(${name}Table).partial();
-const pk = select.pick({
+const pk = createPkSchema(${name}Table).pick({
     ${zodPkPicker}
 });
 
@@ -130,9 +137,12 @@ export const ${name}Service = {
 }
 
 export function generateFilter(name: string, table: PgTable, imports: string[]) {
-    const { columns } = getTableConfig(table);
+    // const { columns } = getTableConfig(table);
+    const columns = getTableColumns(table);
 
-    const filters = columns.map(c => `${c.name}: (val) => eq(${name}Table.${c.name}, val)`).join(',\n\t')
+    const filters = Object.entries(columns).map(([colName, _]) => {
+        return `${colName}: (val) => eq(${name}Table.${colName}, val)`;
+    }).join(',\n\t');
 
     return `import { FilterMap } from "bradb";
 import { eq } from "drizzle-orm";
