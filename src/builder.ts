@@ -52,7 +52,7 @@ const requiredExports: Record<NodeType, (name: string) => string[]> = {
     db: (name) => ["db"]
 };
 
-const generators: Record<NodeType, GeneratorFunc | null> = {
+export const generators: Record<NodeType, GeneratorFunc | null> = {
     router: generateRouter,
     controller: generateController,
     validator: generateValidator,
@@ -88,7 +88,7 @@ export function buildGraph(cfg: BradConfig, name: string, type: NodeType): Node 
 
         try {
             // If config is set to override = true we not check the modules and re-write anywise
-            if (cfg.override) {
+            if (cfg.override && dependOn[type].length > 0) {
                 valid[id(n)] = false;
             } else {
                 const mod = checkNode(n);

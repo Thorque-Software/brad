@@ -15,7 +15,9 @@
         "seed": "ts-node seeders/index.ts",
         "brad": "node ../dist/src/commands.js",
         "clean": "rm -rf node_modules/ package-lock.json && npm install",
-        "test": "chmod +x test.sh && ./test.sh"
+        "test": "npm run build && npm run seed && vitest",
+        "generate": "./scripts/clean.sh && ./scripts/generate.sh",
+        "generate:builder": "./scripts/clean.sh && ./scripts/generate-with-builder.sh"
     },
     "dependencies": {
         "bradb": "file:../dist",

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { Command, Argument } from "commander"
-import { build, destroy, buildGraph, nodeTypes, NodeType, valid } from './builder';
+import { build, destroy, buildGraph, nodeTypes, NodeType, valid, generators } from './builder';
 import { loadConfig } from './config';
+import { generateControllerBuilder } from "./generators";
 
 const program = new Command();
 program.name("brad").description("BRAD - Generator");
@@ -16,10 +17,15 @@ program
             .default("router")
     )
     .option('-o, --override', 'Generator will override the current code', false) 
+    .option('--cb, --controller-with-builder', 'Generate controller using builder', false) 
     .description("generate entity recursively")
     .action(async (name: string, type: NodeType, options) => {
         const cfg = loadConfig();
         cfg.override = options.override || false; 
+
+        if (options.controllerWithBuilder) {
+            generators["controller"] = generateControllerBuilder
+        }
 
         require('ts-node/register');
 

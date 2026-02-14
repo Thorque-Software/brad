@@ -68,16 +68,18 @@ export const ${name}Validator = {
 
 export function generateController(name: string, table: PgTable, imports: string[]) {
     return `import { Request, Response } from "express";
+import { newPagination } from "bradb";
 ${imports.join('\n')};
 
 async function getAll(req: Request, res: Response) {
+    const pagination = newPagination(req.query);
     const filters = ${name}Validator.filter.parse(req.query);
-    const items = await ${name}Service.findAll(filters);
-    const total = await ${name}Service.count(filters);
+    const items = await ${name}Service.findAll(filters, pagination);
 
     res.json({
+        pagination,
         items,
-        total
+        total: pagination.total // this is going to be removed
     });
 }
 
@@ -115,24 +117,45 @@ export const ${name}Controller = {
 };`;
 }
 
+export function generateControllerBuilder(name: string, table: PgTable, imports: string[]) {
+    return `import {
+    findAllBuilder,
+    findOneBuilder,
+    updateBuilder,
+    deleteBuilder,
+    createBuilder
+} from "bradb";
+${imports.join('\n')};
+
+export const ${name}Controller = {
+    getAll: findAllBuilder(${name}Service.findAll, ${name}Validator.filter),
+    getOne: findOneBuilder(${name}Service.findOne, ${name}Validator.pk),
+    create: createBuilder(${name}Service.create, ${name}Validator.insert),
+    update: updateBuilder(${name}Service.update, ${name}Validator.pk, ${name}Validator.update),
+    remove: deleteBuilder(${name}Service.delete, ${name}Validator.pk)
+};`
+}
+
 export function generateService(name: string, table: PgTable, imports: string[]) {
+    const selection = `db
+            .select()
+            .from(${name}Table)
+            .$dynamic()`;
     return `import { ServiceBuilder } from "bradb";
 ${imports.join('\n')};
 
 const builder = new ServiceBuilder(db, ${name}Table, ${name}FilterMap);
 
-const selection = db
-    .select()
-    .from(${name}Table)
-    .$dynamic();
-
 export const ${name}Service = {
     create: builder.create(),
     update: builder.update(),
-    count: builder.count(),
     delete: builder.delete(),
-    findAll: builder.findAll(selection),
-    findOne: builder.findOne(selection)
+    findAll: builder.findAll(
+        ${selection}
+    ),
+    findOne: builder.findOne(
+        ${selection}
+    )
 };`
 }
 

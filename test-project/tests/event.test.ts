@@ -15,6 +15,40 @@ const newEvent = {
     dayOfWeek: 2
 };
 
+describe("Pagination", () => {
+    it("should retrieve the first 5 events", async () => {
+        const res = await req.get("/events?page=1&pageSize=5").expect(200);
+        expect(res.body).toHaveProperty("items");
+        expect(res.body).toHaveProperty("pagination");
+        expect(res.body.pagination).toHaveProperty("page");
+        expect(res.body.pagination).toHaveProperty("pageSize");
+        expect(res.body.pagination).toHaveProperty("total");
+        expect(res.body.pagination).toHaveProperty("count");
+        expect(res.body.pagination.page).toBe(1);
+        expect(res.body.pagination.pageSize).toBe(5);
+        expect(res.body.pagination.total).toBe(12);
+        expect(res.body.pagination.count).toBe(5);
+        expect(res.body.items).toHaveLength(5);
+        expect(res.body.total).toBe(12);
+    });
+
+    it("should retrieve only 3 items in the last page", async () => {
+        const res = await req.get("/events?page=3&pageSize=5").expect(200);
+        expect(res.body).toHaveProperty("items");
+        expect(res.body).toHaveProperty("pagination");
+        expect(res.body.pagination).toHaveProperty("page");
+        expect(res.body.pagination).toHaveProperty("pageSize");
+        expect(res.body.pagination).toHaveProperty("total");
+        expect(res.body.pagination).toHaveProperty("count");
+        expect(res.body.pagination.page).toBe(3);
+        expect(res.body.pagination.pageSize).toBe(5);
+        expect(res.body.pagination.total).toBe(12);
+        expect(res.body.pagination.count).toBe(2);
+        expect(res.body.items).toHaveLength(2);
+        expect(res.body.total).toBe(12);
+    });
+});;
+
 describe("Event controller (integration)", () => {
     let createdEventId: number;
 
@@ -30,6 +64,7 @@ describe("Event controller (integration)", () => {
         });
 
         createdEventId = res.body.id;
+        console.log(createdEventId);
 
         res = await req
             .get(`/events/${createdEventId}`)
@@ -137,6 +172,7 @@ describe("Event controller (integration)", () => {
         expectError(res, `event with id=${createdEventId} not found`, 404);
     });
 });
+
 
 describe("Event filters", () => {
     it("should filter events by year", async () => {

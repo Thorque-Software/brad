@@ -1,46 +1,25 @@
 import { SQL } from "drizzle-orm";
-import { AnyPgTable, PgColumn, PgTable, PgTransaction } from "drizzle-orm/pg-core";
+import { AnyPgTable, PgTable, PgTransaction } from "drizzle-orm/pg-core";
 import z, { ZodObject } from "zod";
 
-export interface RetrieverService<FSchema extends ZodObject, TTable extends PgTable> {
-    findAll: (filters?: Filter<FSchema>, page?: number, pageSize?: number) => Promise<TTable["$inferSelect"][]>;
-    count:  (filters: Filter<FSchema>) => Promise<number>;
-}
+export type FindOneFunc<T extends PgTable> = (pks: PrimaryKeyData<T>) => Promise<object>;
 
-export interface FindOneService<TTable extends PgTable> {
-    findOne: (id: PrimaryKeyType<TTable>) => Promise<Partial<TTable>>;  
-}
+export type FindAllFunc<F extends ZodObject> = (filters?: F, page?: number, pageSize?: number) => Promise<object>;
 
-export interface CreateService<
-    TTable extends PgTable,
-    TSchema extends Record<string, unknown>
-> {
-    create: (
-        data: TTable["$inferInsert"],
-        tx?: PgTransaction<any, TSchema, any>
-    ) => Promise<TTable["$inferSelect"]>;
-}
+export type CountFunc<F extends ZodObject> = (filters?: F) => Promise<object>;
 
-export interface UpdateService<
-    TTable extends PgTable,
-    TSchema extends Record<string, unknown>
-> {
-    update: (
-        id: PrimaryKeyType<TTable>, 
-        data: Partial<TTable["$inferInsert"]>,
-        tx?: PgTransaction<any, TSchema, any>
-    ) => Promise<TTable["$inferSelect"]>;
-}
+export type CreateFunc<T extends PgTable> = (
+    data: T["$inferInsert"], 
+    tx?: PgTransaction<any, any, any>
+) => Promise<T["$inferSelect"]>;
 
-export interface DeleteService<
-    TTable extends PgTable,
-    TSchema extends Record<string, unknown>
-> {
-    delete: (
-        id: PrimaryKeyType<TTable>,
-        tx?: PgTransaction<any, TSchema, any>
-    ) => Promise<void>;
-}
+export type UpdateFunc<T extends PgTable> = (
+    pks: PrimaryKeyData<T>,
+    data: Partial<T["$inferInsert"]>,
+    tx?: PgTransaction<any, any, any>
+) => Promise<T["$inferSelect"]>;
+
+export type DeleteFunc<T extends PgTable> = (pks: PrimaryKeyData<T>) => Promise<void>;
 
 export type PrimaryKeyData<TTable extends AnyPgTable> = {
     [K in keyof TTable["_"]["columns"]
@@ -49,18 +28,6 @@ export type PrimaryKeyData<TTable extends AnyPgTable> = {
             : never
     ]: TTable["_"]["columns"][K]["_"]["data"];
 };
-
-export interface PaginationParams {
-    page: number;
-    pageSize: number;
-}
-
-export type Table = AnyPgTable & {
-    deletedAt: PgColumn;
-    id: any;
-};
-
-export type PrimaryKeyType<T extends AnyPgTable> = T["_"]["columns"]["id"]["_"]["data"];
 
 export type FilterMap<
     Schema extends z.ZodObject,

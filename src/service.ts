@@ -1,9 +1,9 @@
-import { Filter, FilterMap, PrimaryKeyData, PrimaryKeyType, Table } from "./types";
+import { Filter, FilterMap, PrimaryKeyData } from "./types";
 import { AnyPgTable, getTableConfig, PgColumn, PgSelect, PgTable, PgTransaction } from "drizzle-orm/pg-core";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { 
     and, 
-    count as drizzleCount, 
+    count,
     getTableName, InferInsertModel, InferSelectModel, isNull,
     SQL
     } from "drizzle-orm";
@@ -11,6 +11,7 @@ import { buildFilters, buildPKFilters } from "./filters";
 import { BadRequest, handleSqlError, NotFound } from "./errors";
 import { ZodObject } from "zod";
 import { getPKs } from "./pg";
+import { Pagination } from "./controller";
 
 export class ServiceBuilder<
     T extends AnyPgTable,
@@ -54,7 +55,7 @@ export class ServiceBuilder<
     }
 
     findOne<S extends PgSelect>(select: S) {
-        type Row = Awaited<ReturnType<S["execute"]>>[number];
+        type Row = S["_"]["result"][0];
 
         return async (pkValues: PKType): Promise<Row> => {
             const result = await select.where(this.findOneConditions(pkValues));
@@ -64,29 +65,51 @@ export class ServiceBuilder<
     }
 
     findAll<S extends PgSelect>(select: S, paginated=true) {
-        type Row = Awaited<ReturnType<S["execute"]>>[number];
+        type Row = S["_"]["result"][0];
 
         const base = (f?: Filter<FSchema>) => select.where(this.findAllConditions(f));
 
         if (paginated) {
-            return async (filters?: Filter<FSchema>, page: number = 1, pageSize: number = 10): Promise<Row[]> => {
-                const offset = (page - 1) * pageSize;
+            return async (filters?: Filter<FSchema>, p?: Pagination): Promise<Row[]> => {
+                if (!p) p = {
+                    page: 1,
+                    pageSize: 10
+                };
 
-                return await base(filters)
-                    .limit(pageSize) 
-                    .offset(offset)
+                const countQuery = this.db
+                    .select({ count: count() })
+                    .from(this.table as PgTable)
+                    .where(this.findAllConditions(filters));
+
+                const offset = (p.page - 1) * p.pageSize;
+
+                const items = await base(filters).limit(p.pageSize).offset(offset);
+                const [res] = await countQuery;
+                p.total = res.count;
+                p.count = items.length;
+                return items;
             }
         } else {
             return async (filters?: Filter<FSchema>): Promise<Row[]> => {
-                return await base(filters);
+                const items = await base(filters);
+                return items;
             }
         }
     }
 
-    count() {
+    count<S extends PgSelect>(select?: S) {
+        if (select) {
+            return async (filters?: Filter<FSchema>) => {
+                const base = select.where(this.findAllConditions(filters));
+                const subquery = base.as('countsubquery') as any;
+                const [result] = await this.db.select({ count: count() }).from(subquery);
+                return result.count;
+            }
+        }
+
         return async (filters?: Filter<FSchema>) => {
             const [result] = await this.db
-                .select({ count: drizzleCount() })
+                .select({ count: count() })
                 .from(this.table as PgTable)
                 .where(this.findAllConditions(filters));
 
@@ -190,7 +213,7 @@ export class ServiceBuilder<
     }
 }
 
-function haveSoftDelete(table: AnyPgTable, columnName="deleted_at") {
+function haveSoftDelete(table: AnyPgTable, columnName="deleted_at"): table is AnyPgTable & { deletedAt: PgColumn } {
     const { columns } = getTableConfig(table);
     for (const col of columns) {
         if (col.name == columnName) {
