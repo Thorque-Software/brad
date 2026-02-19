@@ -54,30 +54,40 @@ export class ServiceBuilder<
         }
     }
 
-    findOne<S extends PgSelect>(select?: () => PgSelect) {
-        type Row = S["_"]["result"][0];
+    findOne(): (pkValues: PKType) => Promise<typeof this.table["$inferSelect"]>;
 
-        if (!select) select = () => this.db.select().from(this.table as PgTable).$dynamic();
+    findOne<S extends () => PgSelect>(
+        select: S
+    ): (pkValues: PKType) => Awaited<ReturnType<S>["_"]["result"][0]>;
 
-        return async (pkValues: PKType): Promise<Row> => {
-            const result = await select().where(this.findOneConditions(pkValues));
-            if (result.length == 0) throw notFoundWithId(this.tableName, pkValues);
+
+    findOne(select?: () => PgSelect): (pkValues: PKType) => Promise<any> {
+        const actualSelect = select ?? (() => this.db.select().from(this.table as PgTable).$dynamic());
+
+        return async (pkValues: PKType) => {
+            const result = await actualSelect().where(this.findOneConditions(pkValues));
+            if (result.length === 0) {
+                throw notFoundWithId(this.tableName, pkValues);
+            }
             return result[0];
-        }
+        };
     }
 
-    findAll<S extends PgSelect>(
+    findAll(): (filters?: Filter<FSchema>, p?: Pagination) => Promise<typeof this.table["$inferSelect"]>;
+
+    findAll<S extends () => PgSelect>(select: S, paginated: boolean): (filters?: Filter<FSchema>, p?: Pagination) => Promise<Awaited<ReturnType<S>["_"]["result"][0]>>;
+
+    findAll(
         select?: () => PgSelect, 
         paginated = true
     ) {
-        type Row = S["_"]["result"][0];
 
         if (!select) select = () => this.db.select().from(this.table as PgTable).$dynamic();
 
         const base = (f?: Filter<FSchema>) => select().where(this.findAllConditions(f));
 
         if (paginated) {
-            return async (filters?: Filter<FSchema>, p?: Pagination): Promise<Row[]> => {
+            return async (filters?: Filter<FSchema>, p?: Pagination): Promise<any> => {
                 if (!p) p = { page: 1, pageSize: 10 };
 
                 const sub = select().where(this.findAllConditions(filters)).as('sub') as any; // TODO: not any
@@ -94,7 +104,7 @@ export class ServiceBuilder<
                 return items;
             }
         } else {
-            return async (filters?: Filter<FSchema>): Promise<Row[]> => {
+            return async (filters?: Filter<FSchema>): Promise<any> => {
                 const items = await base(filters);
                 return items;
             }

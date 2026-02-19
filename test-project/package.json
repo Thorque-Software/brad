@@ -16,6 +16,7 @@
         "brad": "node ../dist/src/commands.js",
         "clean": "rm -rf node_modules/ package-lock.json && npm install",
         "test": "npm run build && npm run seed && vitest",
+        "test:all": "./cli/test-all.sh",
         "generate": "./cli/clean.sh && ./cli/generate.sh",
         "generate:builder": "./cli/clean.sh && ./cli/generate-with-builder.sh"
     },
