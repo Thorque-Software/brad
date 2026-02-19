@@ -137,10 +137,6 @@ export const ${name}Controller = {
 }
 
 export function generateService(name: string, table: PgTable, imports: string[]) {
-    const selection = `db
-            .select()
-            .from(${name}Table)
-            .$dynamic()`;
     return `import { ServiceBuilder } from "bradb";
 ${imports.join('\n')};
 
@@ -150,12 +146,8 @@ export const ${name}Service = {
     create: builder.create(),
     update: builder.update(),
     delete: builder.delete(),
-    findAll: builder.findAll(
-        ${selection}
-    ),
-    findOne: builder.findOne(
-        ${selection}
-    )
+    findAll: builder.findAll(),
+    findOne: builder.findOne()
 };`
 }
 

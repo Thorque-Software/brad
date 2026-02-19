@@ -54,32 +54,36 @@ export class ServiceBuilder<
         }
     }
 
-    findOne<S extends PgSelect>(select: S) {
+    findOne<S extends PgSelect>(select?: () => PgSelect) {
         type Row = S["_"]["result"][0];
 
+        if (!select) select = () => this.db.select().from(this.table as PgTable).$dynamic();
+
         return async (pkValues: PKType): Promise<Row> => {
-            const result = await select.where(this.findOneConditions(pkValues));
+            const result = await select().where(this.findOneConditions(pkValues));
             if (result.length == 0) throw notFoundWithId(this.tableName, pkValues);
             return result[0];
         }
     }
 
-    findAll<S extends PgSelect>(select: S, paginated=true) {
+    findAll<S extends PgSelect>(
+        select?: () => PgSelect, 
+        paginated = true
+    ) {
         type Row = S["_"]["result"][0];
 
-        const base = (f?: Filter<FSchema>) => select.where(this.findAllConditions(f));
+        if (!select) select = () => this.db.select().from(this.table as PgTable).$dynamic();
+
+        const base = (f?: Filter<FSchema>) => select().where(this.findAllConditions(f));
 
         if (paginated) {
             return async (filters?: Filter<FSchema>, p?: Pagination): Promise<Row[]> => {
-                if (!p) p = {
-                    page: 1,
-                    pageSize: 10
-                };
+                if (!p) p = { page: 1, pageSize: 10 };
 
+                const sub = select().where(this.findAllConditions(filters)).as('sub') as any; // TODO: not any
                 const countQuery = this.db
                     .select({ count: count() })
-                    .from(this.table as PgTable)
-                    .where(this.findAllConditions(filters));
+                    .from(sub)
 
                 const offset = (p.page - 1) * p.pageSize;
 

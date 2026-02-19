@@ -5,6 +5,8 @@ yarn.lock
 dist/
 package-lock.json
 
+!src/services/.gitignore
+!src/validators/.gitignore
 src/routes/*
 src/controllers/*
 src/validators/*

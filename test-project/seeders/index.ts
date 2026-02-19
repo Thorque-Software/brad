@@ -116,12 +116,26 @@ const events = [
     }
 ];
 
+export const staticInscriptions = [
+    { idStudent: 1, idEvent: 1 }, // Alice en EVT01
+    { idStudent: 1, idEvent: 2 }, // Alice en EVT02
+    { idStudent: 2, idEvent: 1 }, // Bob en EVT01
+    { idStudent: 1, idEvent: 3 }, // Alice en EVT03
+    { idStudent: 1, idEvent: 4 }, // Alice en EVT04
+    { idStudent: 1, idEvent: 5 }, // Alice en EVT05
+    { idStudent: 1, idEvent: 6 }, // Alice en EVT06
+    { idStudent: 2, idEvent: 7 }, // Bob en EVT07
+    { idStudent: 2, idEvent: 8 }, // Bob en EVT08
+    { idStudent: 1, idEvent: 8 }, // Bob en EVT08
+    { idStudent: 2, idEvent: 9 }, // Bob en EVT09
+    { idStudent: 2, idEvent: 10 }, // Bob en EVT10
+    { idStudent: 1, idEvent: 11 }, // Alice en EVT11
+    { idStudent: 2, idEvent: 12 }, // Bob en EVT12
+];
+
 // Seeders
 async function main() {
     console.log("Deleting tables");
-    // await db.delete(eventTable);
-    // await db.delete(studentTable);
-    // await db.delete(inscriptionTable);
 
     await resetIdentity("student");
     await resetIdentity("event");
@@ -129,6 +143,7 @@ async function main() {
 
     await db.insert(eventTable).values(events);
     await db.insert(studentTable).values(students);
+    await db.insert(inscriptionTable).values(staticInscriptions);
 };
 
 export async function resetIdentity(tableName: string) {

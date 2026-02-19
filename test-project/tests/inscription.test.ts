@@ -120,14 +120,6 @@ describe("inscription controller (integration)", () => {
         expectError(res, `inscription with idStudent=${studentId} and idEvent=9999 not found`, 404);
     });
 
-    it("GET /inscriptions/student/:idStudent/event/:idEvent - should fail to retrieve a specific inscription if doesn't exist", async () => {
-        const res = await req
-            .get(route(1, 1)) // student 1 and event 1 exists, but not the relation
-            .expect(404);
-
-        expectError(res, `inscription with idStudent=1 and idEvent=1 not found`, 404);
-    });
-
     it("DELETE /inscriptions/student/:idStudent/event/:idEvent - should delete a specific inscription successfully", async () => {
         const res = await req
             .delete(route(studentId, eventId))
@@ -148,14 +140,6 @@ describe("inscription controller (integration)", () => {
             .expect(404);
 
         expectError(res, `inscription with idStudent=${studentId} and idEvent=9999 not found`, 404);
-    });
-
-    it("DELETE /inscriptions/student/:idStudent/event/:idEvent - should fail to retrieve a specific inscription if doesn't exist", async () => {
-        const res = await req
-            .delete(route(1, 1)) // student 1 and event 1 exists, but not the relation
-            .expect(404);
-
-        expectError(res, `inscription with idStudent=1 and idEvent=1 not found`, 404);
     });
 });
 

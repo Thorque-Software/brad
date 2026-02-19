@@ -16,14 +16,15 @@
         "brad": "node ../dist/src/commands.js",
         "clean": "rm -rf node_modules/ package-lock.json && npm install",
         "test": "npm run build && npm run seed && vitest",
-        "generate": "./scripts/clean.sh && ./scripts/generate.sh",
-        "generate:builder": "./scripts/clean.sh && ./scripts/generate-with-builder.sh"
+        "generate": "./cli/clean.sh && ./cli/generate.sh",
+        "generate:builder": "./cli/clean.sh && ./cli/generate-with-builder.sh"
     },
     "dependencies": {
         "bradb": "file:../dist",
         "dotenv": "^17.2.3"
     },
     "devDependencies": {
+        "@types/supertest": "^6.0.3",
         "drizzle-kit": "^0.31.8",
         "supertest": "^7.2.2",
         "vitest": "^3.2.4"
