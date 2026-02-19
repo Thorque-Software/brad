@@ -42,24 +42,36 @@ export const inscriptionService = {
     ) 
 };
 
+const findAllDefault = builder.findAll(); 
+const findOneDefault = builder.findOne(); 
+
 /* Types tests */
 
 type Expect<T extends true> = T;
-type ResultFindOne = Awaited<ReturnType<typeof inscriptionService.findOne>>;
-
-type ResultFindAll = Awaited<ReturnType<typeof inscriptionService.findAllFields>>;
-
 type TypesMatch<T, U> = T extends U ? true : false;
 
-type Match = TypesMatch<ResultFindOne, {
+type ResultFindOne = Awaited<ReturnType<typeof inscriptionService.findOne>>;
+type ResultFindAll = Awaited<ReturnType<typeof inscriptionService.findAllFields>>;
+type ResultFindAllDefault = Awaited<ReturnType<typeof findAllDefault>>;
+type ResultFindOneDefault = Awaited<ReturnType<typeof findOneDefault>>;
+
+/* TESTS */
+type T1 = Expect<TypesMatch<ResultFindAllDefault, {
+    idStudent: number,
+    idEvent: number
+}[]>>;
+
+type T2 = Expect<TypesMatch<ResultFindOneDefault, {
+    idStudent: number,
+    idEvent: number
+}>>;
+
+type T3 = Expect<TypesMatch<ResultFindOne, {
     idFoo: number,
     idAaa: number
-}>;
+}>>;
 
-type MatchAll = TypesMatch<ResultFindAll, {
+type T4 = Expect<TypesMatch<ResultFindAll, {
     foo: number,
     bar: string
-}[]>
-
-type Res = Expect<Match>;
-type Res1 = Expect<MatchAll>;
+}[]>>;

@@ -12,9 +12,6 @@
             "@/*": ["./*"]
         }
     },
-    "include": [
-        "src/**/*.ts",
-        "index.ts",
-    ],
+    "include": ["src/**/*.ts", "src-joins/*.ts", "index-joined", "index.ts", "bin/*.ts"],
     "exclude": ["node_modules", "dist"]
 }

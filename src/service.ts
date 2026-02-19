@@ -14,7 +14,7 @@ import { getPKs } from "./pg";
 import { Pagination } from "./controller";
 
 export class ServiceBuilder<
-    T extends AnyPgTable,
+    T extends PgTable,
     TSchema extends Record<string, unknown>,
     FSchema extends ZodObject,
     PKType extends object = PrimaryKeyData<T>
@@ -54,14 +54,13 @@ export class ServiceBuilder<
         }
     }
 
-    findOne(): (pkValues: PKType) => Promise<typeof this.table["$inferSelect"]>;
+    findOne(): (pkValues: PKType) => Promise<T["$inferSelect"]>;
 
     findOne<S extends () => PgSelect>(
         select: S
-    ): (pkValues: PKType) => Awaited<ReturnType<S>["_"]["result"][0]>;
+    ): (pkValues: PKType) => Promise<ReturnType<S>["_"]["result"][0]>;
 
-
-    findOne(select?: () => PgSelect): (pkValues: PKType) => Promise<any> {
+    findOne(select?: () => PgSelect) {
         const actualSelect = select ?? (() => this.db.select().from(this.table as PgTable).$dynamic());
 
         return async (pkValues: PKType) => {
@@ -73,40 +72,56 @@ export class ServiceBuilder<
         };
     }
 
-    findAll(): (filters?: Filter<FSchema>, p?: Pagination) => Promise<typeof this.table["$inferSelect"]>;
+    findAll(): (filters?: Filter<FSchema>, p?: Pagination) => Promise<T["$inferSelect"][]>;
 
-    findAll<S extends () => PgSelect>(select: S, paginated: boolean): (filters?: Filter<FSchema>, p?: Pagination) => Promise<Awaited<ReturnType<S>["_"]["result"]>>;
+    findAll<S extends () => PgSelect>(select: S): (filters?: Filter<FSchema>, p?: Pagination) => Promise<ReturnType<S>["_"]["result"]>;
+
+    findAll(paginated: boolean): (filters?: Filter<FSchema>, p?: Pagination) => Promise<T["$inferSelect"][]>;
+
+    findAll<S extends () => PgSelect>(select: S, paginated: boolean): (filters?: Filter<FSchema>, p?: Pagination) => Promise<ReturnType<S>["_"]["result"]>;
 
     findAll(
-        select?: () => PgSelect, 
+        selectOrPaginated?: (() => PgSelect) | boolean, 
         paginated = true
     ) {
+        let buildQuery: () => PgSelect;
+        let isPaginated: boolean;
 
-        if (!select) select = () => this.db.select().from(this.table as PgTable).$dynamic();
+        if (typeof selectOrPaginated === 'function') {
+            buildQuery = selectOrPaginated;
+            isPaginated = paginated ?? true;
+        } else {
+            // If its boolean or undefined, we use the default query
+            buildQuery = () => this.db.select().from(this.table as PgTable).$dynamic();
+            isPaginated = selectOrPaginated ?? true;
+        }
 
-        const base = (f?: Filter<FSchema>) => select().where(this.findAllConditions(f));
-
-        if (paginated) {
+        if (isPaginated) {
             return async (filters?: Filter<FSchema>, p?: Pagination): Promise<any> => {
                 if (!p) p = { page: 1, pageSize: 10 };
 
-                const sub = select().where(this.findAllConditions(filters)).as('sub') as any; // TODO: not any
+                const sub = buildQuery()
+                    .where(this.findAllConditions(filters))
+                    .as('sub');
                 const countQuery = this.db
                     .select({ count: count() })
                     .from(sub)
 
                 const offset = (p.page - 1) * p.pageSize;
 
-                const items = await base(filters).limit(p.pageSize).offset(offset);
+                const items = await buildQuery()
+                    .where(this.findAllConditions(filters))
+                    .limit(p.pageSize)
+                    .offset(offset);
+
                 const [res] = await countQuery;
                 p.total = res.count;
                 p.count = items.length;
                 return items;
             }
         } else {
-            return async (filters?: Filter<FSchema>): Promise<any> => {
-                const items = await base(filters);
-                return items;
+            return (filters?: Filter<FSchema>): Promise<any> => {
+                return buildQuery().where(this.findAllConditions(filters))            
             }
         }
     }
