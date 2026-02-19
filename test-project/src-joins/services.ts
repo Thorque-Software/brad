@@ -59,7 +59,7 @@ type Match = TypesMatch<ResultFindOne, {
 type MatchAll = TypesMatch<ResultFindAll, {
     foo: number,
     bar: string
-}>
+}[]>
 
 type Res = Expect<Match>;
 type Res1 = Expect<MatchAll>;

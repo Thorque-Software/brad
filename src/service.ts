@@ -75,7 +75,7 @@ export class ServiceBuilder<
 
     findAll(): (filters?: Filter<FSchema>, p?: Pagination) => Promise<typeof this.table["$inferSelect"]>;
 
-    findAll<S extends () => PgSelect>(select: S, paginated: boolean): (filters?: Filter<FSchema>, p?: Pagination) => Promise<Awaited<ReturnType<S>["_"]["result"][0]>>;
+    findAll<S extends () => PgSelect>(select: S, paginated: boolean): (filters?: Filter<FSchema>, p?: Pagination) => Promise<Awaited<ReturnType<S>["_"]["result"]>>;
 
     findAll(
         select?: () => PgSelect, 
