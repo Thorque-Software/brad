@@ -36,8 +36,8 @@ ${name}Router.delete("/${route}", ${name}Controller.remove);`;
 
 export function generateValidator(name: string, table: PgTable, imports: string[]) {
     const pkColumns = getPKs(table);
-    const zodPkPicker = buildZodPkPicker(pkColumns);
-
+    const zodPkPicker = buildZodPkPicker(table, pkColumns);
+    //console.log(zodPkPicker);
     return `import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { createFilterSchema, createPkSchema } from "bradb";
 import { z } from "zod";
@@ -184,8 +184,16 @@ function buildArgs(columns: PgColumn[]) {
     return args.join(', ');
 }
 
-function buildZodPkPicker(pks: PgColumn[]) {
-    return pks.map(pk => `${pk.name}: true`).join(',\n\t')
+function buildZodPkPicker(table: PgTable, pks: PgColumn[]) {
+  const allColumns = getTableColumns(table);
+  
+  return pks.map(pk => {
+    const tsVariableName = Object.keys(allColumns).find(
+      (key) => allColumns[key].name === pk.name
+    );
+
+    return `${tsVariableName || pk.name}: true`;
+  }).join(',\n\t');
 }
 
 function capitalize(s: string) {
