@@ -86,18 +86,12 @@ export function buildGraph(cfg: BradConfig, name: string, type: NodeType): Node 
     if (!checked[id(n)]) {
         checked[id(n)] = true;
 
-        try {
-            // If config is set to override = true we not check the modules and re-write anywise
-            if (cfg.override && dependOn[type].length > 0) {
-                valid[id(n)] = false;
-            } else {
-                const mod = checkNode(n);
-                mods = { ...mods, ...mod };
-                valid[id(n)] = true;
-            }
-        } catch(err: any) {
-            // it's not necessary to set it to false
+        // If config is set to override = true we not check the modules and re-write anywise
+        if (cfg.override && dependOn[type].length > 0) {
             valid[id(n)] = false;
+        } else {
+            const mod = checkNode(n);
+            mods = { ...mods, ...mod };
         }
     }
 
@@ -175,19 +169,31 @@ export function destroy(root: Node) {
 function checkNode(root: Node): Export {
     console.log(`Checking ${root.name}.${root.type}...`);
 
-    // throw the require error
-    const module = require(root.path);
-    // const code = fs.readFileSync(root.path).toString();
-    //
-    // const a = addCrudOp(`${root.name}${requiredExports[root.type]}`, code, "getAll");
-    // console.log(a);
+    const gen = generators[root.type];
+
+    let module;
+    try {
+        module = require(root.path);
+    } catch(e) {
+        if (!gen) {
+            valid[id(root)] = false;
+            throw Error(`Can't import ${root.path}: ${e}`);
+        }
+
+        // generate this module because does not exists
+        return {};
+    }
 
     for (const exp of root.exports) {
-        if (!module[exp]) {
-            throw new Error(`[Missing export]: Cannot import ${exp} from ${root.path}`);
+        // If the export doesnt exists and we cannot generate it
+        if (!module[exp] && !gen) {
+            valid[id(root)] = false;
+            console.log(module);
+            throw new Error(`[Missing export]: Can't generate ${exp} from ${root.path}`);
         }
     }
 
+    valid[id(root)] = true;
     return module;
 }
 
